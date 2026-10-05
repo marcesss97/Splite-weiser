@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="de-CH">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Nur Skripte aus diesem Projekt dürfen laufen. Daten, Kurse und die Verbindungsprobe des Gruppen-Syncs gehen über https ins Netz. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self'; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'none'; object-src 'none'">
+<title>Ferienkasse</title>
+<meta name="description" content="Gemeinsame Reisekasse: Ausgaben erfassen, zum Tageskurs umrechnen und am Schluss mit wenigen Zahlungen quitt sein.">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#ECEFF4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0D111E" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Ferienkasse">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <div class="wrap">
+    <header class="brand"><h1>Ferienkasse</h1><p>Wer hat was bezahlt, und wer schuldet wem?</p></header>
+    <p class="status" id="boot-status" role="status">Ferienkasse wird geladen …</p>
+    <noscript><p class="status">Die Ferienkasse braucht JavaScript. Schalte es im Browser ein und lade die Seite neu.</p></noscript>
+  </div>
+</div>
+<script src="config.js"></script>
+<script src="vendor-preact.js"></script>
+<script src="vendor-qrcode.js"></script>
+<script src="logic.js"></script>
+<script src="store.js"></script>
+<script src="rates.js"></script>
+<script src="scan.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

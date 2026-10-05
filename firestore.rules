@@ -1,0 +1,19 @@
+rules_version = '2';
+
+// Ferienkasse: Sicherheitsregeln der Datenbank (Cloud Firestore).
+// Jede Reise hat eine lange Zufallskennung. Sie steckt im Einladungslink.
+// Wer die Kennung kennt, darf die Reise lesen und bearbeiten.
+// Niemand kann Reisen auflisten oder durchsuchen.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /trips/{tripId} {
+      allow get, create, update, delete: if tripId.size() >= 16;
+      allow list: if false;
+
+      match /expenses/{expenseId} {
+        allow read, write: if tripId.size() >= 16;
+      }
+    }
+  }
+}
