@@ -23,6 +23,7 @@
   --display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
   --body: "Barlow", "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --bar-h: 63px;      /* height of the navigation bar of a trip, without the home-bar inset */
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -75,6 +76,8 @@ button:disabled { cursor: not-allowed; }
 .ic { flex: none; display: block; }
 
 .wrap { max-width: 680px; margin-inline: auto; padding-inline: 16px; padding-block: 12px 112px; display: flex; flex-direction: column; gap: 16px; }
+/* An open trip has the navigation bar along the bottom edge and the add button above it: the column ends above both. */
+.wrap.with-bar { padding-bottom: calc(var(--bar-h) + 96px); }
 .stack { display: flex; flex-direction: column; gap: 12px; }
 .eyebrow, .sec-h, .field > label:not(.btn):not(.check), .label { font-family: var(--display); font-weight: 600; text-transform: uppercase; color: var(--ink-2); }
 .eyebrow { font-size: 12.5px; line-height: 1; letter-spacing: .1em; }
@@ -115,15 +118,32 @@ button:disabled { cursor: not-allowed; }
 .note .ic { color: var(--accent); margin-top: 1px; }
 .note.warn { background: var(--neg-soft); }
 .note.warn .ic { color: var(--neg); }
+.note .stack { gap: 8px; }
+.note .btn .ic { color: inherit; margin-top: 0; }
+/* A hint with one action: install as an app, switch on the group sync. The third column holds the button that hides it. */
+.tip { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 12px; padding: 14px 6px 14px 14px; border-radius: 14px; background: var(--surface); box-shadow: var(--shadow); }
+.tip.plain { grid-template-columns: auto minmax(0, 1fr); padding-right: 14px; }
+.tip-body { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-width: 0; padding-top: 1px; }
+.tip-body strong { font-size: 16px; line-height: 1.25; }
+.tip-body p { font-size: 14.5px; line-height: 1.4; color: var(--ink-2); }
+.tip-body .btn { margin-top: 4px; }
+.tip > .icon-btn { margin-top: -6px; }
+.tip > .icon-btn:hover { background: var(--inset); }
+.tip.slim { grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0; padding: 0 4px 0 0; border-radius: 12px; }
+.tip.slim > .icon-btn { margin-top: 0; }
+.tip-go { display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 48px; padding: 0 8px 0 14px; border: 0; border-radius: 12px; background: none; color: var(--accent); font-size: 15px; font-weight: 600; text-align: left; }
+.tip-go span { flex: 1; min-width: 0; }
 
 /* ---------- trip header: the ticket ---------- */
 .top { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 40px; }
 .back { display: inline-flex; align-items: center; gap: 2px; min-height: 40px; margin-left: -8px; padding: 0 12px 0 4px; border: 0; border-radius: 10px; background: none; color: var(--ink-2); font-weight: 600; }
 .back:hover { background: var(--surface); color: var(--ink); }
 .top-actions { display: inline-flex; align-items: center; gap: 6px; }
-.syncline { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 8px; padding-inline: 4px; color: var(--ink-2); font-size: 14px; line-height: 1.35; }
+/* The first column has one width for the icon and for the spinner, so the text does not move when the state changes. */
+.syncline { display: grid; grid-template-columns: 18px minmax(0, 1fr); align-items: start; gap: 8px; padding-inline: 4px; color: var(--ink-2); font-size: 14px; line-height: 1.35; }
 .syncline .ic, .syncline .spin { margin-top: 1px; }
-.syncline .spin { width: 16px; height: 16px; }
+.syncline .spin { width: 16px; height: 16px; justify-self: center; }
+.syncline.auto .ic { color: var(--pos); }
 .ticket { border-radius: 14px; background: var(--surface); box-shadow: var(--shadow); }
 .ticket-main { display: flex; flex-direction: column; gap: 8px; padding: 18px 18px 16px; }
 .ticket-main h1 { font: 700 32px/1.05 var(--display); letter-spacing: .01em; overflow-wrap: anywhere; text-wrap: balance; }
@@ -146,12 +166,15 @@ button:disabled { cursor: not-allowed; }
 .c7 { background: var(--a7); color: var(--a7t); } .c8 { background: var(--a8); color: var(--a8t); }
 .avs { display: flex; flex-wrap: wrap; gap: 3px; }
 
-/* ---------- tabs and the add button ---------- */
-.tabs { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 8px); z-index: 10; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow); }
-.tab { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; padding: 0 4px; border: 0; border-radius: 9px; background: none; color: var(--ink-2); font-size: 14.5px; font-weight: 600; }
-.tab[aria-selected="true"] { background: var(--accent-soft); color: var(--accent); }
-@media (max-width: 370px) { .tab .ic { display: none; } }
-.fab { position: fixed; right: max(16px, calc(50% - 324px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 20; display: inline-flex; align-items: center; gap: 8px; min-height: 52px; padding: 0 22px 0 16px; border: 0; border-radius: 26px; background: var(--accent); color: var(--on-accent); font-size: 16px; font-weight: 600; box-shadow: var(--shadow); }
+/* ---------- navigation of a trip: a bar along the bottom edge like in a phone app, and the add button above it ---------- */
+.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px;
+  padding: 6px max(8px, env(safe-area-inset-right, 0px), calc(50% - 332px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px), calc(50% - 332px));
+  border-top: 1px solid var(--line); background: var(--surface); -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-width: 0; min-height: 50px; padding: 2px; border: 0; border-radius: 10px; background: none; color: var(--ink-2); font-size: 12.5px; line-height: 1.15; font-weight: 600; }
+.tab .ic { box-sizing: content-box; padding: 3px 18px; border-radius: 14px; }
+.tab[aria-selected="true"] { color: var(--accent); }
+.tab[aria-selected="true"] .ic { background: var(--accent-soft); }
+.fab { position: fixed; right: max(16px, calc(50% - 324px)); bottom: calc(var(--bar-h) + 14px + env(safe-area-inset-bottom, 0px)); z-index: 20; -webkit-user-select: none; user-select: none; display: inline-flex; align-items: center; gap: 8px; min-height: 52px; padding: 0 22px 0 16px; border: 0; border-radius: 26px; background: var(--accent); color: var(--on-accent); font-size: 16px; font-weight: 600; box-shadow: var(--shadow); }
 .fab:hover { background: var(--accent-hi); }
 
 /* ---------- expense list ---------- */
@@ -271,6 +294,16 @@ button.x:hover { background: var(--inset); }
 .amount { min-height: 60px; font: 600 28px/1 var(--mono); text-align: right; }
 .select.cur { width: 96px; min-height: 60px; font: 600 16px/1 var(--mono); }
 .hint { font-size: 13.5px; line-height: 1.4; color: var(--ink-2); }
+.lead { font-size: 15.5px; line-height: 1.45; }
+/* Guides: numbered steps, each with a short text and at most one button. */
+.steps { list-style: none; counter-reset: fk-step; display: flex; flex-direction: column; gap: 20px; margin: 0; padding: 0; }
+.steps > li { counter-increment: fk-step; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 12px; }
+.steps > li::before { content: counter(fk-step); display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font: 600 13.5px/1 var(--mono); }
+.step { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; padding-top: 3px; }
+.step strong { font-size: 16px; line-height: 1.3; }
+.step p { font-size: 14.5px; line-height: 1.45; color: var(--ink-2); overflow-wrap: anywhere; }
+.step p .m { font-size: 13px; color: var(--ink); }
+.code { align-self: stretch; margin: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--inset); color: var(--ink); font: 500 12.5px/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; -webkit-user-select: all; user-select: all; }
 .err { padding: 10px 12px; border-radius: 8px; background: var(--neg-soft); color: var(--ink); font-size: 14.5px; }
 .ok { padding: 10px 12px; border-radius: 8px; background: var(--pos-soft); color: var(--ink); font-size: 14.5px; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -323,6 +356,8 @@ label.row { cursor: pointer; }
 .meta { font-size: 13px; color: var(--ink-2); text-align: center; }
 
 .toast { position: fixed; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); z-index: 80; width: max-content; max-width: min(calc(100% - 32px), 440px); padding: 12px 16px; border-radius: 10px; background: var(--ink); color: var(--bg); font-size: 14.5px; font-weight: 500; box-shadow: var(--shadow); transform: translateX(-50%); }
+/* With a trip open, messages appear above the add button. */
+.toast.up { bottom: calc(var(--bar-h) + 82px + env(safe-area-inset-bottom, 0px)); }
 
 @media (prefers-reduced-motion: no-preference) {
   .spin { animation: fk-spin .9s linear infinite; }

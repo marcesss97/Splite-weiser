@@ -23,7 +23,9 @@ Du brauchst ein kostenloses GitHub-Konto. Am Computer geht es am einfachsten.
 
 **Aufs Handy legen**
 
-- Android (Chrome): Adresse öffnen, im Menü «App installieren» wählen.
+Die App weist selbst darauf hin: Auf der Startseite und in der Reise steht «Als App installieren», solange sie im Browser läuft. Installiert startet sie im Vollbild, ohne Browser-Leisten.
+
+- Android (Chrome): Adresse öffnen und im Hinweis auf «Installieren» tippen, oder im Menü «App installieren» wählen.
 - iPhone (Safari): Adresse öffnen, «Teilen», dann «Zum Home-Bildschirm». Dazu gibt es [Besonderheiten](#besonderheiten-auf-dem-iphone).
 
 ## 2. Gruppen-Sync einrichten
@@ -31,6 +33,8 @@ Du brauchst ein kostenloses GitHub-Konto. Am Computer geht es am einfachsten.
 Ohne diesen Schritt liegt jede Reise nur auf dem Gerät, auf dem sie angelegt wurde. Mit ihm tragen alle auf dem eigenen Handy ein, sehen die Einträge der anderen sofort und können auch ohne Netz buchen; gesendet wird, sobald wieder Netz da ist.
 
 Der Sync läuft über Firebase von Google im kostenlosen Tarif «Spark», ohne Kreditkarte. Du brauchst ein Google-Konto. Die Bezeichnungen in der Firebase-Konsole können je nach Sprache und Stand leicht von den hier genannten abweichen.
+
+Dieselben Schritte stehen auch in der App: auf der Startseite «Gruppen-Sync einrichten». Dort kopiert ein Knopf die Regeln, und ein Link führt direkt zur Datei `config.js` auf GitHub.
 
 1. **Projekt anlegen.** [console.firebase.google.com](https://console.firebase.google.com) öffnen und ein neues Projekt erstellen, Name zum Beispiel «ferienkasse». Google Analytics wird nicht gebraucht: ausschalten.
 2. **Datenbank anlegen.** Im Menü «Firestore» öffnen (unter «Databases & Storage» oder «Build») und «Create database» wählen. Edition «Standard». Die Kennung der Datenbank unverändert auf `(default)` lassen. Standort zum Beispiel `europe-west6 (Zürich)`; er lässt sich später nicht mehr ändern. Start im «Production mode».
@@ -59,7 +63,7 @@ Der Sync läuft über Firebase von Google im kostenlosen Tarif «Spark», ohne K
    | «Keine Antwort von Firebase» | Netz prüfen, dann die Werte aus Schritt 5 |
    | Unter «Gruppen-Sync» steht «Nicht eingeschaltet: Die Datei config.js lässt sich nicht lesen» | In `config.js` darf nur der Block stehen, keine Zeilen mit `import` oder `initializeApp` |
 
-7. **Reise teilen.** Eine Reise anlegen, oben auf «Einladen» tippen und den Link oder den QR-Code an die Gruppe geben. Wer den Link öffnet, ist dabei. Eine Reise, die schon vorher auf deinem Gerät lag, gibst du in der Reise über das Regler-Symbol mit «Für die Gruppe freigeben» frei.
+7. **Reise teilen.** Eine Reise anlegen, oben auf «Einladen» tippen und den Link oder den QR-Code an die Gruppe geben. Wer den Link öffnet, ist dabei. Eine Reise, die schon vorher auf deinem Gerät lag, gibst du ebenfalls über «Einladen» frei: Es erscheint zuerst «Für die Gruppe freigeben», danach der Link. Ab dann steht in der Reise «Automatisch für die ganze Gruppe gespeichert».
 
 **Kontingent.** Der kostenlose Tarif erlaubt pro Tag 50'000 Lesevorgänge, 20'000 Schreibvorgänge und 20'000 Löschungen, dazu 1 GiB Daten (Stand Oktober 2026). Eine Feriengruppe braucht davon einen Bruchteil. Ist es doch einmal aufgebraucht, bleiben neue Einträge auf den Geräten und werden nachgereicht. Das Kontingent wird täglich um Mitternacht kalifornischer Zeit frei, in der Schweiz also gegen 9 Uhr morgens. Kosten entstehen im Tarif «Spark» keine.
 
@@ -126,6 +130,7 @@ Gut zu wissen:
 ## Anpassen und aktualisieren
 
 - Eine Datei ändern: auf GitHub öffnen, Stift, ändern, «Commit changes». Nach etwa einer Minute ist die neue Fassung veröffentlicht. Die App fragt bei jedem Start mit Netz nach der neusten Fassung.
+- Eine neue Fassung der App einspielen: nur die geänderten Dateien hochladen («Add file», «Upload files»); gleichnamige Dateien werden ersetzt. Die Datei `config.js` dabei nicht ersetzen, sonst ist der Gruppen-Sync wieder ausgeschaltet.
 - Name und Farben: `manifest.webmanifest` (Name und Farbe der installierten App), `index.html` (Titel) und der Anfang von `style.css` (Farben als Variablen).
 - Währungen in der Auswahl und Kategorien: am Anfang von `logic.js`.
 
@@ -139,7 +144,7 @@ Gut zu wissen:
 | `rates.js` | Tageskurse |
 | `scan.js` | Beleg-Scan |
 | `sw.js`, `manifest.webmanifest`, `icon-*.png`, `apple-touch-icon.png`, `favicon.svg` | Installierbare App, Start ohne Netz |
-| `firestore.rules` | Sicherheitsregeln für die Firebase-Konsole (wird nicht von der Seite geladen) |
+| `firestore.rules` | Sicherheitsregeln für die Firebase-Konsole (die Anleitung in der App kopiert sie von hier) |
 | `vendor-*.js`, `*.woff2` | Mitgelieferte Bibliotheken und Schriften, siehe `LICENSES.txt` |
 
 ## Was geprüft ist und was nicht
@@ -148,7 +153,7 @@ Geprüft, automatisch und wiederholbar:
 
 - Die Rechenlogik mit rund 27'000 Einzelprüfungen: Aufteilen auf den Rappen genau, Umrechnen, Ausgleich mit möglichst wenigen Zahlungen, Lesen von Beträgen («1'234.50», «12,5», «1.500»), Umgang mit unsinnigen oder manipulierten Daten.
 - Die Tageskurse mit einer stellbaren Uhr und einem nachgestellten Netz: Wochenenden, Kurs vor und nach 16 Uhr, Ausfall einer Quelle, hängende Antworten.
-- Die ganze App in einem echten Browser (Chromium) mit über 150 Prüfungen: Reisen, Buchungen, Kurse, Sicherung, Start ohne Netz, Zurück-Taste. Der Gruppen-Sync wurde auf zwei Arten geprüft: mit der echten Firebase-Bibliothek ohne erreichbaren Server und mit einem nachgebauten Sync-Server und mehreren Geräten (beitreten, gleichzeitig ändern, ohne Netz buchen, freigeben, löschen, fehlende Datenbank, fehlende Regeln).
+- Die ganze App in einem echten Browser (Chromium) mit rund 190 Prüfungen: Reisen, Buchungen, Kurse, Sicherung, Start ohne Netz, Zurück-Taste, die Leiste am unteren Rand, die Hinweise zum Installieren und die Anleitung zum Gruppen-Sync. Der Gruppen-Sync wurde auf zwei Arten geprüft: mit der echten Firebase-Bibliothek ohne erreichbaren Server und mit einem nachgebauten Sync-Server und mehreren Geräten (beitreten, gleichzeitig ändern, ohne Netz buchen, freigeben, löschen, fehlende Datenbank, fehlende Regeln).
 
 Nicht geprüft, weil es von hier aus nicht möglich war:
 

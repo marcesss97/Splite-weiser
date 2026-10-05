@@ -220,8 +220,112 @@
     return html`<svg class="qr" viewBox=${"0 0 " + (n + 2 * q) + " " + (n + 2 * q)} role="img" aria-label="QR-Code mit dem Einladungslink" shape-rendering="crispEdges"><rect width="100%" height="100%" fill="#fff" /><path d=${d} fill="#000" /></svg>`;
   }
 
+  /* ---------- as an app on the home screen ---------- */
+  /* Browsers on Android and on the desktop hand over an install offer that may be shown on a tap. The iPhone has no such
+     thing: there the way leads through the share menu, and the installed app starts with a storage of its own. */
+  let installOffer = null;
+  const installSubs = new Set();
+  const installChanged = () => { installSubs.forEach(f => { try { f(); } catch (e) { /* a listener that is gone */ } }); };
+  window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installOffer = e; installChanged(); });
+  window.addEventListener("appinstalled", () => { installOffer = null; installChanged(); });
+  function isStandalone() {
+    try { return navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches || window.matchMedia("(display-mode: fullscreen)").matches; } catch (e) { return false; }
+  }
+  function isIos() {
+    const ua = navigator.userAgent || "";
+    return /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  }
+  function useInstallOffer() {
+    const [, bump] = useState(0);
+    useEffect(() => { const f = () => bump(n => n + 1); installSubs.add(f); return () => { installSubs.delete(f); }; }, []);
+    return installOffer;
+  }
+  /* Shows the browser's own install dialog. An offer can be used once. */
+  function runInstall() {
+    const offer = installOffer;
+    if (!offer) return;
+    installOffer = null; installChanged();
+    try { offer.prompt(); } catch (e) { /* the browser has withdrawn the offer */ }
+  }
+  /* The hint on the start page, and as one line (slim) in a trip. It goes away for good once it is closed; the guide stays in the settings. */
+  function InstallHint({ onHow, slim }) {
+    const offer = useInstallOffer();
+    const [off, setOff] = useState(() => !!ls.get("fk.install.off", false));
+    const kind = off || isStandalone() ? null : offer ? "offer" : isIos() ? "ios" : null;
+    if (!kind) return null;
+    const hide = () => { ls.set("fk.install.off", true); setOff(true); };
+    if (slim) return html`
+      <section class="tip slim" aria-label="Als App installieren">
+        <button type="button" class="tip-go" onClick=${kind === "offer" ? runInstall : onHow}><${Icon} n="device" s=${18} /><span>Als App installieren</span><${Icon} n="next" s=${16} /></button>
+        <button type="button" class="icon-btn" aria-label="Hinweis ausblenden" onClick=${hide}><${Icon} n="close" s=${18} /></button>
+      </section>`;
+    return html`
+      <section class="tip" aria-label="Als App installieren">
+        <span class="x-ic"><${Icon} n="device" /></span>
+        <div class="tip-body">
+          <strong>Als App installieren</strong>
+          <p>Dann startet die Ferienkasse vom ${kind === "ios" ? "Home-Bildschirm" : "Startbildschirm"}: im Vollbild, ohne Browser-Leisten und auch ohne Netz.</p>
+          ${kind === "offer"
+            ? html`<button type="button" class="btn primary small" onClick=${runInstall}><${Icon} n="download" s=${16} />Installieren</button>`
+            : html`<button type="button" class="btn primary small" onClick=${onHow}>So geht es</button>`}
+        </div>
+        <button type="button" class="icon-btn" aria-label="Hinweis ausblenden" onClick=${hide}><${Icon} n="close" /></button>
+      </section>`;
+  }
+  /* link: the invitation of the open trip, if it is a shared one. hasCloud, hasLocal: what this device has to take along. */
+  function InstallSheet({ link, hasCloud, hasLocal, onClose, say }) {
+    const offer = useInstallOffer();
+    const [shown, setShown] = useState(false);
+    const ios = isIos(), ua = navigator.userAgent || "";
+    /* Other browsers on the iPhone and the windows inside chat apps have the share button elsewhere, or no such entry at all. */
+    const safari = /Version\/[\d.]+.*Safari\//.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);
+    const copy = () => {
+      const no = () => setShown(true);
+      try { navigator.clipboard.writeText(link).then(() => say("Link kopiert. In der App fügst du ihn bei «Mit Link beitreten» ein."), no); } catch (e) { no(); }
+    };
+    if (isStandalone()) return html`
+      <${Sheet} title="Als App installieren" onClose=${onClose} closeLabel="Fertig">
+        <p class="ok">Die Ferienkasse läuft bereits als App.</p>
+      <//>`;
+    return html`
+      <${Sheet} title="Als App installieren" onClose=${onClose} closeLabel="Fertig">
+        <p class="lead">Als App startet die Ferienkasse vom ${ios ? "Home-Bildschirm" : "Startbildschirm"}: im Vollbild, ohne Browser-Leisten und auch ohne Netz.</p>
+        ${ios ? html`
+          ${(hasCloud || hasLocal) && html`
+            <div class="note"><${Icon} n="device" /><div class="stack">
+              <p><strong>Vorher: Reisen mitnehmen.</strong> Auf iPhone und iPad hat die App einen eigenen Speicher und beginnt leer.</p>
+              ${hasCloud && html`<p>Eine geteilte Reise holst du in der App mit dem Einladungslink wieder hinein, über «Mit Link beitreten».</p>`}
+              ${link && html`<div><button type="button" class="btn small" onClick=${copy}><${Icon} n="copy" s=${16} />Link dieser Reise kopieren</button></div>`}
+              ${link && shown && html`<input class="input linkbox" readonly aria-label="Einladungslink" value=${link} onFocus=${e => e.target.select()} />`}
+              ${hasLocal && html`<p>Eine Reise, die nur auf diesem Gerät liegt, sicherst du vorher: in der Reise unter «Reise bearbeiten» die Sicherung herunterladen. In der App liest du sie in den Einstellungen wieder ein.</p>`}
+            </div></div>`}
+          <ol class="steps">
+            <li><div class="step"><strong>${safari ? "In Safari auf «Teilen» tippen" : "Auf «Teilen» tippen"}</strong><p>${safari
+              ? "Das ist das Quadrat mit dem Pfeil nach oben. Auf neueren iPhones steckt es hinter den drei Punkten «…»."
+              : "Das ist das Quadrat mit dem Pfeil nach oben, meist neben der Adresse. Fehlt danach der Eintrag «Zum Home-Bildschirm», öffne die Ferienkasse in Safari."}</p></div></li>
+            <li><div class="step"><strong>«Zum Home-Bildschirm» wählen</strong><p>Der Eintrag steht weiter unten in der Liste. Mit «Hinzufügen» bestätigen.</p></div></li>
+            <li><div class="step"><strong>Vom Home-Bildschirm starten</strong><p>Ab jetzt öffnest du die Ferienkasse über ihr Symbol, nicht mehr über den Browser.</p></div></li>
+            ${link && html`<li><div class="step"><strong>Reise wieder öffnen</strong><p>In der App auf «Mit Link beitreten» tippen und den kopierten Link einfügen.</p></div></li>`}
+          </ol>
+          ${!hasCloud && !hasLocal && html`<p class="hint">Auf iPhone und iPad hat die App einen eigenen Speicher und beginnt leer. Leg Reisen deshalb am besten gleich in der App an.</p>`}` : html`
+          ${offer && html`<div><button type="button" class="btn primary" onClick=${runInstall}><${Icon} n="download" s=${18} />Installieren</button></div>`}
+          <div class="field">
+            <span class="label">Android</span>
+            <p class="hint">Im Browser-Menü (drei Punkte) «App installieren» oder «Zum Startbildschirm hinzufügen» wählen.</p>
+          </div>
+          <div class="field">
+            <span class="label">iPhone</span>
+            <p class="hint">Die Ferienkasse in Safari öffnen, auf «Teilen» tippen, dann «Zum Home-Bildschirm». Dort beginnt die App mit leerem Speicher: Geteilte Reisen kommen mit dem Einladungslink dazu, andere über eine Sicherung.</p>
+          </div>
+          <div class="field">
+            <span class="label">Computer</span>
+            <p class="hint">In Chrome oder Edge auf das Installieren-Symbol rechts in der Adresszeile klicken. In Safari auf dem Mac: «Ablage», dann «Zum Dock hinzufügen».</p>
+          </div>`}
+      <//>`;
+  }
+
   /* ---------- home ---------- */
-  function Home({ reg, onOpen, onNew, onJoin, onSettings }) {
+  function Home({ reg, onOpen, onNew, onJoin, onSettings, onSetup, onInstall }) {
     return html`
       <header class="brand">
         <div class="brand-row">
@@ -231,6 +335,7 @@
         <p>Wer hat was bezahlt, und wer schuldet wem?</p>
       </header>
       ${!Store.storageOk && html`<div class="note warn" role="alert"><${Icon} n="device" /><div>Dieser Browser lässt nichts speichern (privater Modus oder gesperrte Website-Daten). Reisen gehen verloren, sobald du die Seite schliesst. Öffne die Ferienkasse in einem gewöhnlichen Fenster.</div></div>`}
+      <${InstallHint} onHow=${onInstall} />
       ${reg.length > 0
         ? html`
           <section class="stack">
@@ -263,9 +368,17 @@
               ${Store.cloudOn && html`<button type="button" class="btn" onClick=${onJoin}><${Icon} n="link" s=${18} />Mit Link beitreten</button>`}
             </div>
           </section>`}
-      ${!Store.cloudOn && html`<p class="status">${Store.configState === "off"
-        ? "Reisen bleiben auf diesem Gerät. Damit die ganze Gruppe eintragen kann, lässt sich ein Sync einschalten: siehe Einstellungen."
-        : "Der Gruppen-Sync ist aus, weil in der Datei config.js etwas nicht stimmt. Mehr dazu in den Einstellungen. Bis dahin bleiben Reisen auf diesem Gerät."}</p>`}
+      ${!Store.cloudOn && html`
+        <section class="tip plain" aria-label="Gemeinsam speichern">
+          <span class="x-ic"><${Icon} n="people" /></span>
+          <div class="tip-body">
+            <strong>Gemeinsam speichern</strong>
+            <p>${Store.configState === "off"
+              ? "Im Moment bleiben Reisen auf diesem Gerät. Mit dem Gruppen-Sync tragen alle auf dem eigenen Handy ein, und alles wird laufend gemeinsam gespeichert. Erst dann kannst du andere einladen."
+              : "Der Gruppen-Sync ist aus, weil in der Datei config.js etwas nicht stimmt. Bis dahin bleiben Reisen auf diesem Gerät."}</p>
+            <button type="button" class="btn small" onClick=${onSetup}>Gruppen-Sync einrichten</button>
+          </div>
+        </section>`}
     `;
   }
 
@@ -351,7 +464,7 @@
     network: "Keine Verbindung zum Anbieter. Prüf dein Netz."
   };
   const SYNC_TEXT = {
-    off: "Nicht eingeschaltet. Reisen liegen nur auf diesem Gerät. Wie du den Sync für die ganze Gruppe einschaltest, steht in der Datei README im GitHub-Projekt, Abschnitt «Gruppen-Sync einrichten».",
+    off: "Nicht eingeschaltet. Reisen liegen nur auf diesem Gerät. Mit dem Gruppen-Sync tragen alle ein, und alles wird laufend gemeinsam gespeichert. Die Anleitung führt Schritt für Schritt durch das Einrichten.",
     broken: "Nicht eingeschaltet: Die Datei config.js lässt sich nicht lesen, vermutlich wegen eines Tippfehlers. Ersetze darin nur die eine Zeile durch den Block aus der Firebase-Konsole, von «const firebaseConfig = {» bis «};». Das README zeigt ein Beispiel.",
     incomplete: "Nicht eingeschaltet: In der Datei config.js fehlen Angaben, oder es stehen noch Platzhalter darin. Kopier den ganzen Block aus der Firebase-Konsole, mindestens mit apiKey und projectId."
   };
@@ -364,12 +477,8 @@
     internal: "Die Prüfung liess sich nicht starten. Lade die Seite neu und versuch es nochmal."
   };
   const CLOUD_NO = "Keine Antwort von Firebase. Prüf zuerst dein Netz. Ist es in Ordnung, stimmen vermutlich die Werte in config.js nicht.";
-  function SettingsSheet({ onClose, say, onScanChange, onImported }) {
-    const first = useMemo(() => Scan.settings(), []);
-    const [key, setKey] = useState(first.key);
-    const [model, setModel] = useState(first.model);
-    const [state, setState] = useState(null);
-    const [err, setErr] = useState(null);
+  /* Asks the sync server directly and says in plain words what is missing. */
+  function CloudCheck() {
     const [cloud, setCloud] = useState(null);
     const checkCloud = () => {
       setCloud({ busy: true });
@@ -380,6 +489,105 @@
           setCloud({ ok: false, msg: (CLOUD_ERR[code] || CLOUD_NO) + (!quiet && e.message ? " Meldung von Firebase: " + String(e.message).slice(0, 220) : "") });
         });
     };
+    return html`
+      <div><button type="button" class="btn small" disabled=${!!(cloud && cloud.busy)} onClick=${checkCloud}><${Icon} n="refresh" s=${16} />Verbindung prüfen</button></div>
+      ${cloud && cloud.busy && html`<p class="hint" role="status">Verbindung wird geprüft, das dauert höchstens eine Viertelminute …</p>`}
+      ${cloud && cloud.msg && html`<p class=${cloud.ok ? "ok" : "err"} role="status">${cloud.msg}</p>`}`;
+  }
+
+  /* ---------- group sync: the guide, and sharing a trip that lives on one device ---------- */
+  /* Where a file of this installation is edited: on GitHub Pages the address names the account and the project. */
+  function editLink(file) {
+    try {
+      const m = /^([a-z0-9][a-z0-9-]*)\.github\.io$/i.exec(location.hostname);
+      if (!m) return null;
+      const repo = location.pathname.replace(/[^/]*$/, "").split("/").filter(Boolean)[0] || location.hostname;
+      return /^[A-Za-z0-9._-]+$/.test(repo) ? "https://github.com/" + m[1] + "/" + repo + "/edit/main/" + file : null;
+    } catch (e) { return null; }
+  }
+  function SetupSheet({ onClose, say }) {
+    const [rules, setRules] = useState(null);                         // null = still loading, "" = the file is not there
+    const [shown, setShown] = useState(false);
+    const edit = useMemo(() => editLink("config.js"), []);
+    useEffect(() => {
+      let alive = true;
+      const take = t => { if (alive) setRules(/service\s+cloud\.firestore/.test(t || "") ? String(t).trim() : ""); };
+      try { fetch("firestore.rules", { cache: "no-cache" }).then(r => (r.ok ? r.text() : "")).then(take, () => take("")); } catch (e) { take(""); }
+      return () => { alive = false; };
+    }, []);
+    const copyRules = () => {
+      const no = () => setShown(true);
+      if (!rules) { no(); return; }
+      try { navigator.clipboard.writeText(rules).then(() => say("Regeln kopiert. Füg sie in Firebase im Reiter «Regeln» ein."), no); } catch (e) { no(); }
+    };
+    const bad = Store.configState === "broken" || Store.configState === "incomplete";
+    return html`
+      <${Sheet} title="Gruppen-Sync einrichten" onClose=${onClose} closeLabel="Fertig">
+        ${Store.cloudOn
+          ? html`<div class="field">
+              <p class="ok" role="status">Der Gruppen-Sync ist eingeschaltet, Firebase-Projekt <span class="m">${Store.projectId}</span>. Neue Reisen werden automatisch für die Gruppe gespeichert.</p>
+              <${CloudCheck} />
+            </div>`
+          : html`<p class="lead">Mit dem Gruppen-Sync sehen alle dieselbe Reise, tragen auf dem eigenen Handy ein, und alles wird laufend gemeinsam gespeichert. Erst dann kannst du andere einladen.</p>
+            <p class="hint">Dafür braucht die Ferienkasse einen gemeinsamen Speicher: ein eigenes Projekt bei Firebase von Google, kostenlos und ohne Kreditkarte. Das Einrichten dauert rund zehn Minuten und ist nur einmal nötig. Am bequemsten geht es am Computer.</p>`}
+        ${bad && html`<p class="err" role="status">${SYNC_TEXT[Store.configState]}</p>`}
+        <ol class="steps">
+          <li><div class="step">
+            <strong>Projekt anlegen</strong>
+            <p>Die Firebase-Konsole öffnen, mit einem Google-Konto anmelden und ein Projekt erstellen, zum Beispiel «ferienkasse». Google Analytics braucht es nicht.</p>
+            <a class="btn small" href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer"><${Icon} n="arrow" s=${16} />Firebase-Konsole öffnen</a>
+          </div></li>
+          <li><div class="step">
+            <strong>Datenbank anlegen</strong>
+            <p>Im Menü «Firestore» öffnen (unter «Build» oder «Databases & Storage») und «Datenbank erstellen» wählen, englisch «Create database». Edition «Standard», die Kennung unverändert auf «(default)», Standort zum Beispiel Zürich (europe-west6), Start im Produktionsmodus.</p>
+          </div></li>
+          <li><div class="step">
+            <strong>Regeln einsetzen</strong>
+            <p>In der Datenbank den Reiter «Regeln» öffnen («Rules»), den vorhandenen Text löschen, die Regeln der Ferienkasse einfügen und «Veröffentlichen» wählen («Publish»).</p>
+            ${rules !== "" && html`<button type="button" class="btn small" disabled=${rules === null} onClick=${copyRules}><${Icon} n="copy" s=${16} />Regeln kopieren</button>`}
+            ${rules === "" && html`<p>Die Regeln stehen in der Datei firestore.rules in deinem GitHub-Projekt.</p>`}
+            ${shown && rules && html`<p>Kopieren hat nicht geklappt. Halte den Finger auf den Text und kopiere ihn von Hand:</p><pre class="code">${rules}</pre>`}
+          </div></li>
+          <li><div class="step">
+            <strong>Web-App registrieren</strong>
+            <p>In der Projektübersicht auf das Symbol <span class="m">${"</>"}</span> (Web) tippen, einen Namen eingeben, «Firebase Hosting» nicht ankreuzen und «App registrieren» wählen. Firebase zeigt jetzt einen Block, der mit <span class="m">const firebaseConfig = {</span> beginnt und mit <span class="m">};</span> endet. Kopiere diesen Block.</p>
+          </div></li>
+          <li><div class="step">
+            <strong>Block in config.js einsetzen</strong>
+            <p>Auf GitHub die Datei config.js zum Bearbeiten öffnen (Stift-Symbol) und die eine Zeile <span class="m">const firebaseConfig = null;</span> durch den kopierten Block ersetzen. Sonst nichts ändern. Mit «Commit changes» speichern.</p>
+            ${edit && html`<a class="btn small" href=${edit} target="_blank" rel="noopener noreferrer"><${Icon} n="arrow" s=${16} />config.js auf GitHub bearbeiten</a>`}
+          </div></li>
+          <li><div class="step">
+            <strong>Prüfen</strong>
+            <p>Ein bis zwei Minuten warten und die Ferienkasse neu laden. Danach steht hier oben «eingeschaltet», und «Verbindung prüfen» sagt, ob noch etwas fehlt.</p>
+            <button type="button" class="btn small" onClick=${() => location.reload()}><${Icon} n="refresh" s=${16} />Neu laden</button>
+          </div></li>
+        </ol>
+        <div class="field">
+          <span class="label">Danach</span>
+          <p class="hint">Neue Reisen werden automatisch für die Gruppe gespeichert. In der Reise auf «Einladen» tippen und den Link oder den QR-Code weitergeben: Wer ihn öffnet, ist dabei. Eine Reise, die schon auf diesem Gerät liegt, gibst du ebenfalls über «Einladen» frei.</p>
+          <p class="hint">Die Werte in config.js sind keine Passwörter. Wer eine Reise sehen darf, bestimmt der Einladungslink: Gib ihn nur an eure Gruppe.</p>
+        </div>
+      <//>`;
+  }
+  /* «Einladen» in a trip that lives on this device only, with the group sync switched on: one tap moves it to the group. */
+  function ShareSheet({ onPublish, onClose }) {
+    const [busy, setBusy] = useState(false);
+    const go = async () => { if (busy) return; setBusy(true); await onPublish(); setBusy(false); };
+    return html`
+      <${Sheet} title="Einladen" onClose=${onClose}>
+        <p class="lead">Diese Reise liegt bisher nur auf diesem Gerät. Gib sie für die Gruppe frei: Dann wird sie laufend gemeinsam gespeichert, und du bekommst den Einladungslink.</p>
+        <div class="foot"><button type="button" class="btn primary block" disabled=${busy} onClick=${go}><${Icon} n="people" s=${18} />${busy ? "Wird freigegeben …" : "Für die Gruppe freigeben"}</button></div>
+        <p class="hint">Alle Buchungen bleiben erhalten. Wer den Link öffnet, sieht die Reise und kann eintragen, ohne Konto und ohne Passwort.</p>
+      <//>`;
+  }
+
+  function SettingsSheet({ onClose, say, onScanChange, onImported, onSetup, onInstall }) {
+    const first = useMemo(() => Scan.settings(), []);
+    const [key, setKey] = useState(first.key);
+    const [model, setModel] = useState(first.model);
+    const [state, setState] = useState(null);
+    const [err, setErr] = useState(null);
     const prov = Scan.provider(key);
     const check = () => {
       if (!key.trim()) { setState({ ok: false, msg: "Füg zuerst einen Schlüssel ein." }); return; }
@@ -411,9 +619,8 @@
           <p class="hint">${Store.cloudOn
             ? html`Eingeschaltet, Firebase-Projekt <span class="m">${Store.projectId}</span>. Neue Reisen werden für die Gruppe synchronisiert. Einträge ohne Netz gehen nicht verloren, sie werden später gesendet.`
             : SYNC_TEXT[Store.configState] || SYNC_TEXT.off}</p>
-          ${Store.cloudOn && html`<div><button type="button" class="btn small" disabled=${!!(cloud && cloud.busy)} onClick=${checkCloud}><${Icon} n="refresh" s=${16} />Verbindung prüfen</button></div>`}
-          ${cloud && cloud.busy && html`<p class="hint" role="status">Verbindung wird geprüft, das dauert höchstens eine Viertelminute …</p>`}
-          ${cloud && cloud.msg && html`<p class=${cloud.ok ? "ok" : "err"} role="status">${cloud.msg}</p>`}
+          ${Store.cloudOn && html`<${CloudCheck} />`}
+          <div><button type="button" class=${"btn small" + (Store.cloudOn ? " ghost" : "")} onClick=${onSetup}>${Store.cloudOn ? "Anleitung zum Einrichten" : "Gruppen-Sync einrichten"}</button></div>
         </div>
         <div class="field">
           <label for="fk-ai-key">Beleg-Scan mit KI (freiwillig)</label>
@@ -444,6 +651,7 @@
           <span class="label">Als App aufs Handy</span>
           <p class="hint">Android: im Browser-Menü «App installieren». iPhone: in Safari auf «Teilen», dann «Zum Home-Bildschirm». Danach startet die Ferienkasse wie eine App, auch ohne Netz.</p>
           <p class="hint">Auf dem iPhone beginnt die App vom Home-Bildschirm mit leerem Speicher. Geteilte Reisen holst du mit dem Einladungslink über «Mit Link beitreten» dazu. Eine Reise, die nur auf diesem Gerät liegt, nimmst du als Sicherung mit: hier herunterladen, in der App einlesen.</p>
+          ${!isStandalone() && html`<div><button type="button" class="btn small" onClick=${onInstall}>Anleitung zum Installieren</button></div>`}
         </div>
       <//>`;
   }
@@ -1159,15 +1367,18 @@
     }, [expenses]);
     const [pick, setPick] = useState(false);
     const base = trip.base, my = meId && bal.per[meId] ? bal.per[meId].net : null;
+    /* The bar at the bottom works like in a phone app: every view starts at its top, and a tap on the open one leads back up. */
+    const pickTab = id => { if (id !== tab) setTab(id); try { window.scrollTo(0, 0); } catch (e) { /* nothing to scroll */ } };
     return html`
       <div class="top">
         <button type="button" class="back" onClick=${onBack}><${Icon} n="back" />Reisen</button>
         <span class="top-actions">
-          ${mode === "cloud" && html`<button type="button" class="btn small" onClick=${() => open({ t: "invite" })}><${Icon} n="share" s=${16} />Einladen</button>`}
+          <button type="button" class="btn small" onClick=${() => open({ t: "invite" })}><${Icon} n="share" s=${16} />Einladen</button>
           <button type="button" class="icon-btn" aria-label="Reise bearbeiten" onClick=${() => open({ t: "trip-edit" })}><${Icon} n="sliders" s=${22} /></button>
         </span>
       </div>
       ${note}
+      <${InstallHint} slim onHow=${() => open({ t: "install" })} />
       <section class="ticket">
         <div class="ticket-main">
           <span class="eyebrow">Reise</span>
@@ -1194,7 +1405,7 @@
           </div>
         </section>`}
       <div class="tabs" role="tablist" aria-label="Ansicht">${TABS.map(([id, label, icon]) => html`
-        <button type="button" key=${id} role="tab" id=${"fk-tab-" + id} aria-selected=${String(tab === id)} class="tab" onClick=${() => setTab(id)}><${Icon} n=${icon} s=${18} />${label}</button>`)}
+        <button type="button" key=${id} role="tab" id=${"fk-tab-" + id} aria-selected=${String(tab === id)} class="tab" onClick=${() => pickTab(id)}><${Icon} n=${icon} s=${22} /><span>${label}</span></button>`)}
       </div>
       <div class="stack" role="tabpanel" aria-labelledby=${"fk-tab-" + tab} style="gap:16px">
         ${tab === "list" && html`<${ExpenseList} trip=${trip} expenses=${expenses} who=${who} meId=${meId} nActive=${ms.length} canEdit=${canEdit}
@@ -1239,6 +1450,7 @@
     const [sync, setSync] = useState({ pending: false, cached: false });
     const [online, setOnline] = useState(() => navigator.onLine !== false);
     const [stuck, setStuck] = useState(false);
+    const [slow, setSlow] = useState(false);             // online, but the sync server has not confirmed the shown data for a while
     const [trouble, setTrouble] = useState(null);        // the server's reason when the sync does not work although the device is online
     const [tab, setTab] = useState("list");
     const [sheet, setSheet] = useState(null);
@@ -1376,9 +1588,11 @@
     }, [tripName, knownName, tripId, refreshReg]);
 
     useEffect(() => { if (!sync.pending) { setStuck(false); return; } const t = setTimeout(() => setStuck(true), 5000); return () => clearTimeout(t); }, [sync.pending]);
-    /* Online, and still a shared trip stays unreachable or entries stay unsent: the running sync never says why
-       (a missing database or a used-up quota look like "no connection" to it). So ask the server directly, once a minute. */
-    const ask = mode === "cloud" && online && (raw === "offline" || stuck);
+    const unconfirmed = mode === "cloud" && online && sync.cached;
+    useEffect(() => { if (!unconfirmed) { setSlow(false); return; } const t = setTimeout(() => setSlow(true), 6000); return () => clearTimeout(t); }, [unconfirmed]);
+    /* Online, and still a shared trip stays unreachable, entries stay unsent or the server stays silent: the running sync never
+       says why (a missing database or a used-up quota look like "no connection" to it). So ask the server directly, once a minute. */
+    const ask = mode === "cloud" && online && (raw === "offline" || stuck || slow);
     useEffect(() => {
       if (!ask) return;
       let alive = true, t = null;
@@ -1453,7 +1667,24 @@
         ? "Ohne Netz. Deine Einträge bleiben auf dem Gerät und werden gesendet, sobald du wieder online bist."
         : "Ohne Netz. Dieser Browser speichert nichts dauerhaft: Lass die Seite offen, bis du wieder online bist, sonst gehen neue Einträge verloren."}</span></p>`;
       else if (stuck) note = html`<p class="syncline" role="status"><span class="spin" aria-hidden="true"></span><span>Einträge werden gesendet …</span></p>`;
-    } else if (trip && mode === "local") note = html`<p class="syncline"><${Icon} n="device" s=${18} /><span>Nur auf diesem Gerät gespeichert.</span></p>`;
+      else if (slow) note = html`<p class="syncline" role="status"><span class="spin" aria-hidden="true"></span><span>${Store.cloudDurable
+        ? "Der Gruppen-Sync antwortet noch nicht. Deine Einträge bleiben auf dem Gerät und werden gesendet, sobald die Verbindung steht."
+        : "Der Gruppen-Sync antwortet noch nicht. Lass die Seite offen, bis die Verbindung steht, sonst gehen neue Einträge verloren."}</span></p>`;
+      /* The usual case, and the answer to "is it saved?": the line says so by itself, a moment after every entry. */
+      else if (sync.pending || sync.cached) note = html`<p class="syncline busy"><span class="spin" aria-hidden="true"></span><span>${sync.pending ? "Wird für die Gruppe gespeichert …" : "Verbindung zur Gruppe wird aufgebaut …"}</span></p>`;
+      else note = html`<p class="syncline auto"><${Icon} n="check" s=${18} /><span>Automatisch für die ganze Gruppe gespeichert.</span></p>`;
+    } else if (trip && mode === "local") note = html`<p class="syncline"><${Icon} n="device" s=${18} /><span>Nur auf diesem Gerät gespeichert. Für die ganze Gruppe: oben auf «Einladen».</span></p>`;
+
+    /* Moves a trip from this device to the group. If the sheet it was started from is still open, the invitation takes its place;
+       a form somebody opened meanwhile is left alone. */
+    const publish = async (tid, name) => {
+      try { await Store.publish(tid); } catch (e) { fail(e); return false; }
+      Store.registry.put({ id: tid, name, mode: "cloud" }); refreshReg();
+      const cur = sheetRef.current;
+      if (tripRef.current === tid && cur && (cur.t === "trip-edit" || cur.t === "invite")) setSheet({ t: "invite", k: newId() });
+      say("Freigegeben. Schick jetzt den Link an die Gruppe.");
+      return true;
+    };
 
     let sheetEl = null;
     if (sheet) {
@@ -1461,8 +1692,15 @@
         onCreated=${(id, mine) => { if (mine) rememberMe(id, mine); showTrip(id, true); say("Reise angelegt. Jetzt die erste Ausgabe erfassen."); }} />`;
       else if (sheet.t === "join") sheetEl = html`<${JoinSheet} key=${sheet.k} onClose=${close} onJoin=${id => { join(id, true); }} />`;
       else if (sheet.t === "settings") sheetEl = html`<${SettingsSheet} key=${sheet.k} onClose=${close} say=${say} onScanChange=${setScanOn}
+        onSetup=${() => open({ t: "setup" })} onInstall=${() => open({ t: "install" })}
         onImported=${r => { refreshReg(); showTrip(r.id, true); say("Sicherung eingelesen: " + r.count + (r.count === 1 ? " Buchung." : " Buchungen.")); }} />`;
-      else if (trip && sheet.t === "invite") sheetEl = html`<${InviteSheet} key=${sheet.k} trip=${trip} onClose=${close} say=${say} />`;
+      else if (sheet.t === "setup") sheetEl = html`<${SetupSheet} key=${sheet.k} onClose=${close} say=${say} />`;
+      else if (sheet.t === "install") sheetEl = html`<${InstallSheet} key=${sheet.k} link=${trip && mode === "cloud" ? Store.linkFor(trip.id) : null}
+        hasCloud=${reg.some(e => e.mode === "cloud")} hasLocal=${reg.some(e => e.mode === "local")} onClose=${close} say=${say} />`;
+      /* «Einladen» leads to the invitation, or to what is still missing for it: sharing this trip, or switching on the group sync. */
+      else if (trip && sheet.t === "invite") sheetEl = mode === "cloud" ? html`<${InviteSheet} key=${sheet.k} trip=${trip} onClose=${close} say=${say} />`
+        : Store.cloudOn ? html`<${ShareSheet} key=${sheet.k} onClose=${close} onPublish=${() => publish(trip.id, trip.name)} />`
+        : html`<${SetupSheet} key=${sheet.k} onClose=${close} say=${say} />`;
       else if (trip && sheet.t === "expense") sheetEl = html`<${ExpenseForm} key=${sheet.k} trip=${trip} expense=${sheet.e || null} meId=${meId} scanOn=${scanOn} act=${act} onClose=${close} say=${say} />`;
       else if (trip && sheet.t === "transfer") sheetEl = html`<${TransferForm} key=${sheet.k} trip=${trip} transfer=${sheet.e || null} preset=${sheet.preset} meId=${meId} act=${act} onClose=${close} say=${say} />`;
       else if (trip && sheet.t === "trip-edit") sheetEl = html`<${TripEdit} key=${sheet.k} trip=${trip} mode=${mode} list=${expenses || []} loading=${expenses === null} meId=${meId} setMe=${setMe} act=${act} onClose=${close}
@@ -1472,15 +1710,7 @@
           if (await a.removeTrip(tid, list)) { Store.registry.remove(tid); refreshReg(); say("Reise gelöscht."); }
         }}
         onLeave=${() => { const tid = trip.id; goHome(); Store.registry.remove(tid); refreshReg(); say("Reise von diesem Gerät entfernt."); }}
-        onPublish=${async () => {
-          const tid = trip.id, name = trip.name;
-          try { await Store.publish(tid); } catch (e) { fail(e); return false; }
-          Store.registry.put({ id: tid, name, mode: "cloud" }); refreshReg();
-          /* The invitation only replaces the settings sheet; a form somebody opened meanwhile is left alone. */
-          if (tripRef.current === tid && sheetRef.current && sheetRef.current.t === "trip-edit") setSheet({ t: "invite", k: newId() });
-          say("Freigegeben. Schick jetzt den Link an die Gruppe.");
-          return true;
-        }} />`;
+        onPublish=${() => publish(trip.id, trip.name)} />`;
     }
 
     /* While online, a trip that stays unreachable gets the server's own reason if it has one. */
@@ -1489,12 +1719,15 @@
     if (tripId && trip) view = html`<${TripView} trip=${trip} mode=${mode} expenses=${expenses} meId=${meId} canEdit=${true} tab=${tab} setTab=${setTab} open=${open} setMe=${setMe} say=${say} note=${note} onBack=${goHome} />`;
     else if (tripId) view = html`<${TripGate} state=${gate && typeof gate === "object" ? null : gate} onBack=${goHome}
       onForget=${() => { const tid = tripId; goHome(); Store.registry.remove(tid); refreshReg(); }} />`;
-    else view = html`<${Home} reg=${reg} onOpen=${id => showTrip(id, true)} onNew=${() => open({ t: "trip-new" })} onJoin=${() => open({ t: "join" })} onSettings=${() => open({ t: "settings" })} />`;
+    else view = html`<${Home} reg=${reg} onOpen=${id => showTrip(id, true)} onNew=${() => open({ t: "trip-new" })} onJoin=${() => open({ t: "join" })} onSettings=${() => open({ t: "settings" })}
+      onSetup=${() => open({ t: "setup" })} onInstall=${() => open({ t: "install" })} />`;
 
+    /* An open trip has the navigation bar and the add button at the bottom: the column and the messages keep clear of them. */
+    const bar = !!(tripId && trip);
     return html`
-      <div class="wrap">${view}</div>
+      <div class=${"wrap" + (bar ? " with-bar" : "")}>${view}</div>
       ${sheetEl}
-      ${toast && html`<div class="toast" role="status" aria-live="polite" key=${toast.k}>${toast.msg}</div>`}
+      ${toast && html`<div class=${"toast" + (bar && !sheet ? " up" : "")} role="status" aria-live="polite" key=${toast.k}>${toast.msg}</div>`}
     `;
   }
 

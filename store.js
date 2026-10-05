@@ -200,7 +200,18 @@ window.FKStore = (function () {
   /* Eine Reise vom Gerät in den Gruppen-Sync heben, in bestätigten Schritten direkt beim Server (nichts davon wartet
      unbemerkt in einer Warteschlange). Erst wenn der Server genau den Stand des Geräts hat, wird die Kopie auf dem Gerät entfernt.
      Was während des Hochladens noch auf dem Gerät gebucht wird, geht in der nächsten Runde mit. */
+  /* Zwei Aufrufe für dieselbe Reise (etwa aus zwei Dialogen) teilen sich ein Hochladen: Sonst fände der zweite die
+     Kopie des Geräts nicht mehr vor, sobald der erste fertig ist, und meldete einen Fehler, obwohl alles geklappt hat. */
+  var publishing = Object.create(null);
   function publish(id) {
+    if (!publishing[id]) {
+      var done = function () { delete publishing[id]; };
+      publishing[id] = publishOnce(id);
+      publishing[id].then(done, done);
+    }
+    return publishing[id];
+  }
+  function publishOnce(id) {
     return withDb(function (c) {
       var m = c.m, sent = Object.create(null), rounds = 0;
       function ref(key) { return key === "trip" ? m.doc(c.db, "trips", id) : m.doc(c.db, "trips", id, "expenses", key.slice(2)); }
