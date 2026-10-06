@@ -2,6 +2,8 @@
 
 Gemeinsame Reisekasse als Web-App: Ausgaben erfassen, zum Tageskurs in die Hauptwährung umrechnen und am Schluss mit möglichst wenigen Zahlungen quitt sein. Die App läuft im Browser, lässt sich aufs Handy legen und startet auch ohne Netz.
 
+Sie nimmt sich dabei nicht zu ernst: Jede Person wählt ein Emoji als Avatar (in der Reise oben rechts auf das eigene Bild tippen), die Abrechnung zeigt eine Meme-Karte passend zum Saldo, und wenn alle quitt sind, regnet es Konfetti.
+
 Dieses README führt zuerst durch drei Schritte und dient danach zum Nachschlagen.
 
 1. [Veröffentlichen auf GitHub](#1-veröffentlichen-auf-github): 5 Minuten. Danach läuft die App, vorerst für ein einzelnes Gerät.
@@ -116,9 +118,10 @@ Klappt etwas davon nicht, hilft meist die Meldung in der App. Sonst lohnt ein Bl
 
 - Eine Datei ändern: auf GitHub öffnen, Stift, ändern, «Commit changes». Nach etwa einer Minute ist die neue Fassung veröffentlicht. Die App fragt bei jedem Start mit Netz nach der neusten Fassung.
 - Eine neue Fassung der App einspielen: nur die geänderten Dateien hochladen («Add file», «Upload files»); gleichnamige Dateien werden ersetzt. Die Datei `config.js` dabei nicht ersetzen, sonst ist der Gruppen-Sync wieder ausgeschaltet.
-- Die Datei `scan.js` aus einer früheren Fassung wird nicht mehr gebraucht (der Beleg-Scan mit KI ist entfernt). Sie stört nicht, lässt sich auf GitHub aber löschen: Datei öffnen, Menü mit den drei Punkten, «Delete file».
+- Aus früheren Fassungen werden einige Dateien nicht mehr gebraucht: `scan.js` (der Beleg-Scan mit KI ist entfernt) und die Schriften `barlow-*.woff2` und `barlow-condensed-*.woff2`. Sie stören nicht, lassen sich auf GitHub aber löschen: Datei öffnen, Menü mit den drei Punkten, «Delete file».
 - Name und Farben: `manifest.webmanifest` (Name und Farbe der installierten App), `index.html` (Titel) und der Anfang von `style.css` (Farben als Variablen).
-- Währungen in der Auswahl und Kategorien: am Anfang von `logic.js`.
+- Währungen in der Auswahl, Kategorien, die Liste der Avatare und die Sprüche der Meme-Karten: in `logic.js`.
+- Die Meme-Karten zeigen bekannte Sprüche als Text und ein Emoji. Bilder der Original-Memes sind nicht enthalten, weil sie urheberrechtlich geschützt sind.
 
 | Datei | Aufgabe |
 |---|---|
@@ -138,17 +141,17 @@ Geprüft, automatisch und wiederholbar:
 
 - Die Rechenlogik mit rund 27'000 Einzelprüfungen: Aufteilen auf den Rappen genau, Umrechnen, Ausgleich mit möglichst wenigen Zahlungen, Lesen von Beträgen («1'234.50», «12,5», «1.500»), Umgang mit unsinnigen oder manipulierten Daten.
 - Die Tageskurse mit einer stellbaren Uhr und einem nachgestellten Netz: Wochenenden, Kurs vor und nach 16 Uhr, Ausfall einer Quelle, hängende Antworten.
-- Die ganze App in einem echten Browser (Chromium) mit rund 190 Prüfungen: Reisen, Buchungen, Kurse, Sicherung, Start ohne Netz, Zurück-Taste, die Leiste am unteren Rand, die Hinweise zum Installieren und die Anleitung zum Gruppen-Sync. Der Gruppen-Sync wurde auf zwei Arten geprüft: mit der echten Firebase-Bibliothek ohne erreichbaren Server und mit einem nachgebauten Sync-Server und mehreren Geräten (beitreten, gleichzeitig ändern, ohne Netz buchen, freigeben, löschen, fehlende Datenbank, fehlende Regeln).
+- Die ganze App in einem echten Browser (Chromium) mit rund 200 Prüfungen: Reisen, Buchungen, Kurse, Sicherung, Start ohne Netz, Zurück-Taste, die Leiste am unteren Rand, die Hinweise zum Installieren, die Anleitung zum Gruppen-Sync, Avatare, Meme-Karten und Konfetti. Der Gruppen-Sync wurde auf zwei Arten geprüft: mit der echten Firebase-Bibliothek ohne erreichbaren Server und mit einem nachgebauten Sync-Server und mehreren Geräten (beitreten, gleichzeitig ändern, ohne Netz buchen, freigeben, löschen, fehlende Datenbank, fehlende Regeln).
 
 Nicht geprüft, weil es von hier aus nicht möglich war:
 
 - der Betrieb mit einem echten Firebase-Projekt, einschliesslich der Regeln aus `firestore.rules`,
 - die Kursdienste im echten Betrieb aus dem Browser,
-- echte iPhones und Android-Handys (Installieren, Teilen-Menü),
+- echte iPhones und Android-Handys (Installieren, Teilen-Menü, das Aussehen der Emojis auf dem jeweiligen Gerät),
 - die Veröffentlichung auf GitHub Pages selbst.
 
 Dafür ist der [Probelauf](#3-probelauf-vor-den-ferien) da.
 
 ## Lizenzen
 
-Die mitgelieferten Bibliotheken und Schriften stehen unter freien Lizenzen: Firebase JavaScript SDK und htm (Apache 2.0), Preact und qrcode-generator (MIT), Barlow und IBM Plex Mono (SIL Open Font License 1.1). Die vollständigen Angaben und Texte stehen in [`LICENSES.txt`](LICENSES.txt).
+Die mitgelieferten Bibliotheken und Schriften stehen unter freien Lizenzen: Firebase JavaScript SDK und htm (Apache 2.0), Preact und qrcode-generator (MIT), die Schriften Fredoka, Anton und IBM Plex Mono (SIL Open Font License 1.1). Die Emojis zeichnet jedes Gerät mit seiner eigenen Emoji-Schrift. Die vollständigen Angaben und Texte stehen in [`LICENSES.txt`](LICENSES.txt).

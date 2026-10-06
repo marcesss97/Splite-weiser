@@ -25,11 +25,17 @@
     const s = w.length > 1 ? w[0][0] + w[1][0] : w[0].slice(0, 2);
     return s.charAt(0).toUpperCase() + s.slice(1);
   };
-  const GHOST = id => ({ id, name: "Unbekannt", c: 7, o: 999, gone: true });
+  const GHOST = id => ({ id, name: "Unbekannt", c: 7, o: 999, gone: true, a: "geist" });
+  /* a: the avatar. Whoever has not chosen one gets one derived from the member's id, the same on every device;
+     chosen tells the two apart. */
   function membersOf(trip, all) {
     const m = trip.members || {};
-    return FK.memberIds(trip, all).map(id => ({ id, name: m[id].name || "?", c: m[id].c || 0, o: m[id].o || 0, gone: !!m[id].gone }));
+    return FK.memberIds(trip, all).map(id => ({ id, name: m[id].name || "?", c: m[id].c || 0, o: m[id].o || 0, gone: !!m[id].gone, a: m[id].a || FK.avatarFor(id), chosen: !!m[id].a }));
   }
+  const COLOR_NAMES = ["Blau", "Orange", "Türkis", "Gelb", "Rosa", "Grün", "Violett", "Rot"];
+  /* A picture for a trip in the list, the same on every start: picked by the trip's id. */
+  const TRIP_EMOJI = ["🏝️", "🏔️", "🚐", "⛵", "🏕️", "🎿", "🌋", "🗺️", "🚲", "🏖️", "✈️", "🚂"], TRIP_TINT = ["k-lodging", "k-mountain", "k-transport", "k-groceries", "k-activity", "k-shopping", "k-food", "k-apero"];
+  function hashOf(str) { let h = 2166136261; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
   function refsOf(e) {
     const s = new Set();
     if (e.payer) s.add(e.payer);
@@ -72,19 +78,7 @@
     copy: ["M9 9h10a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V10a1 1 0 0 1 1-1z", "M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"],
     trash: ["M4 7h16M9 7V4.5h6V7M6.5 7l.8 12a1 1 0 0 0 1 .9h7.4a1 1 0 0 0 1-.9l.8-12M10 11v5M14 11v5"],
     swap: ["M4 8h14l-3-3M20 16H6l3 3"],
-    list: ["M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"],
-    scale: ["M12 4v16M7 20h10M5 7h14", "M5 7l-2.5 6a2.7 2.7 0 0 0 5 0L5 7z", "M19 7l-2.5 6a2.7 2.7 0 0 0 5 0L19 7z"],
-    chart: ["M5 20v-8M12 20V5M19 20v-11"],
     user: ["M8.5 8a3.5 3.5 0 1 0 7 0a3.5 3.5 0 1 0-7 0", "M5 20c.5-3.5 3.2-5.5 7-5.5s6.5 2 7 5.5"],
-    receipt: ["M6 3.5h12v17l-2-1.3-2 1.3-2-1.3-2 1.3-2-1.3-2 1.3v-17z", "M9 8h6M9 12h6"],
-    food: ["M7 3v6.5a2.5 2.5 0 0 0 5 0V3M9.5 3v18", "M17.5 3c-1.8 1.6-2.5 4-2.5 7v3h2.5V3zm0 10v8"],
-    apero: ["M7 4h10l-.8 5.5a4.2 4.2 0 0 1-8.4 0L7 4z", "M12 14v6M8.5 20h7"],
-    groceries: ["M4 9h16l-1.4 9.2a1 1 0 0 1-1 .8H6.4a1 1 0 0 1-1-.8L4 9z", "M8.5 9l3-5M15.5 9l-3-5"],
-    lodging: ["M4 11.5l8-6.5 8 6.5V19a1 1 0 0 1-1 1h-4.5v-5.5h-5V20H5a1 1 0 0 1-1-1v-7.5z"],
-    transport: ["M4 16.5v-4l2-5.5h12l2 5.5v4zM6 16.5V19M18 16.5V19M4.5 12.5h15", "M7.5 14.5h.01M16.5 14.5h.01"],
-    mountain: ["M3 19h18l-6.2-10-2.8 4.4L9 6.5 3 19z"],
-    activity: ["M12 4l2.4 5 5.6.8-4 3.9.9 5.5-4.9-2.6-4.9 2.6.9-5.5-4-3.9 5.6-.8L12 4z"],
-    shopping: ["M6 8.5h12l1 11.5H5L6 8.5z", "M9 8.5V7a3 3 0 0 1 6 0v1.5"],
     other: ["M4.8 12a1.2 1.2 0 1 0 2.4 0a1.2 1.2 0 1 0-2.4 0", "M10.8 12a1.2 1.2 0 1 0 2.4 0a1.2 1.2 0 1 0-2.4 0", "M16.8 12a1.2 1.2 0 1 0 2.4 0a1.2 1.2 0 1 0-2.4 0"],
     share: ["M12 15V4M8 7.5l4-4 4 4", "M7 11H5.5a1 1 0 0 0-1 1v7.5a1 1 0 0 0 1 1h13a1 1 0 0 0 1-1V12a1 1 0 0 0-1-1H17"],
     link: ["M10 13.5a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1", "M14 10.5a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"],
@@ -93,14 +87,34 @@
     offline: ["M7 18.5a4.5 4.5 0 0 1-.6-8.96 6 6 0 0 1 11.5 1.5A3.8 3.8 0 0 1 17.5 18.5H7z", "M4 4l16 16"],
     download: ["M12 4v11M8 11.5l4 4 4-4M5 19.5h14"],
     upload: ["M12 15.5V4.5M8 8l4-4 4 4M5 19.5h14"],
-    refresh: ["M19.5 9A8 8 0 1 0 20 13.5", "M20 4.5V9h-4.5"]
+    refresh: ["M19.5 9A8 8 0 1 0 20 13.5", "M20 4.5V9h-4.5"],
+    pen: ["M4 20l1-4.5L16.2 4.3a1.6 1.6 0 0 1 2.3 0l1.2 1.2a1.6 1.6 0 0 1 0 2.3L8.5 19 4 20z", "M14.5 6l3.5 3.5"]
   };
   function Icon({ n, s }) {
     const size = s || 20;
     return html`<svg class="ic" width=${size} height=${size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${(IC[n] || IC.other).map(d => html`<path d=${d} />`)}</svg>`;
   }
+  /* s: 1 small, 2 large, 3 extra large. */
   function Av({ m, s }) {
-    return html`<span class=${"av c" + ((m.c || 0) % 8 + 1) + (s ? " av-s" : "")} aria-hidden="true">${initials(m.name)}</span>`;
+    const av = FK.avatar(m.a), size = s === 1 ? " av-s" : s === 2 ? " av-l" : s === 3 ? " av-xl" : "";
+    return html`<span class=${"av c" + ((m.c || 0) % 8 + 1) + size + (av ? " em" : "")} aria-hidden="true">${av ? av.ch : initials(m.name)}</span>`;
+  }
+  /* A meme card: a saying nearly everybody knows, in big white capitals above and below a picture. */
+  function Meme({ m }) {
+    return html`
+      <figure class=${"meme t-" + m.tone}>
+        <p class="meme-t">${m.top}</p>
+        <span class="meme-e" aria-hidden="true">${m.emoji}</span>
+        <p class="meme-t">${m.bottom}</p>
+      </figure>`;
+  }
+  /* Confetti for a few seconds. Not for people who have asked their device for less motion. */
+  function Confetti() {
+    const [on, setOn] = useState(() => { try { return !window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } });
+    const bits = useMemo(() => Array.from({ length: 30 }, (_, i) => ({ l: Math.random() * 100, d: Math.random() * 0.9, r: Math.round(Math.random() * 360), c: i % 6 })), []);
+    useEffect(() => { const t = setTimeout(() => setOn(false), 3800); return () => clearTimeout(t); }, []);
+    if (!on) return null;
+    return html`<div class="confetti" aria-hidden="true">${bits.map((b, i) => html`<i key=${i} class=${"cf" + b.c} style=${"left:" + b.l.toFixed(1) + "%;animation-delay:" + b.d.toFixed(2) + "s;--r:" + b.r + "deg"}></i>`)}</div>`;
   }
 
   const SLOW = "Das Speichern dauert länger als sonst. Prüf deine Verbindung.";
@@ -257,12 +271,12 @@
     const hide = () => { ls.set("fk.install.off", true); setOff(true); };
     if (slim) return html`
       <section class="tip slim" aria-label="Als App installieren">
-        <button type="button" class="tip-go" onClick=${kind === "offer" ? runInstall : onHow}><${Icon} n="device" s=${18} /><span>Als App installieren</span><${Icon} n="next" s=${16} /></button>
+        <button type="button" class="tip-go" onClick=${kind === "offer" ? runInstall : onHow}><span class="emo" aria-hidden="true">📲</span><span>Als App installieren</span><${Icon} n="next" s=${16} /></button>
         <button type="button" class="icon-btn" aria-label="Hinweis ausblenden" onClick=${hide}><${Icon} n="close" s=${18} /></button>
       </section>`;
     return html`
       <section class="tip" aria-label="Als App installieren">
-        <span class="x-ic"><${Icon} n="device" /></span>
+        <span class="x-ic k-apero" aria-hidden="true">📲</span>
         <div class="tip-body">
           <strong>Als App installieren</strong>
           <p>Dann startet die Ferienkasse vom ${kind === "ios" ? "Home-Bildschirm" : "Startbildschirm"}: im Vollbild, ohne Browser-Leisten und auch ohne Netz.</p>
@@ -330,7 +344,7 @@
     return html`
       <header class="brand">
         <div class="brand-row">
-          <h1>Ferienkasse</h1>
+          <h1><span class="logo" aria-hidden="true">🏝️</span><span class="word">Ferienkasse</span></h1>
           <button type="button" class="icon-btn" aria-label="Einstellungen" onClick=${onSettings}><${Icon} n="sliders" s=${22} /></button>
         </div>
         <p>Wer hat was bezahlt, und wer schuldet wem?</p>
@@ -343,6 +357,7 @@
             <h2 class="sec-h">Eure Reisen</h2>
             <div class="trips">${reg.map(t => html`
               <button type="button" key=${t.id} class="trip" onClick=${() => onOpen(t.id)}>
+                <span class=${"trip-e " + TRIP_TINT[hashOf(t.id) % TRIP_TINT.length]} aria-hidden="true">${TRIP_EMOJI[hashOf("e" + t.id) % TRIP_EMOJI.length]}</span>
                 <span class="trip-body">
                   <span class="trip-name">${t.name || "Geteilte Reise"}</span>
                   <span class="trip-meta">${t.mode === "cloud" ? "Für die Gruppe, synchronisiert" : "Nur auf diesem Gerät"}</span>
@@ -357,21 +372,23 @@
           </section>`
         : html`
           <section class="empty">
+            <span class="empty-e" aria-hidden="true">🏝️🍕💸</span>
             <h2>Noch keine Reise</h2>
             <p>Leg eine Reise an und trag ein, wer mitkommt. Danach werden die Ausgaben erfasst, und die Ferienkasse rechnet aus, wer wem wie viel schuldet.</p>
             <ul class="feat">
-              <li><span class="x-ic"><${Icon} n=${Store.cloudOn ? "people" : "device"} /></span>${Store.cloudOn ? "Die ganze Gruppe trägt ein, auch ohne Netz" : "Läuft ohne Konto, alles bleibt auf deinem Gerät"}</li>
-              <li><span class="x-ic"><${Icon} n="swap" /></span>In Euro zahlen, zum Tageskurs in Franken abrechnen</li>
-              <li><span class="x-ic"><${Icon} n="scale" /></span>Am Schluss quitt mit so wenigen Zahlungen wie möglich</li>
+              <li><span class="x-ic k-groceries" aria-hidden="true">${Store.cloudOn ? "👯" : "📱"}</span>${Store.cloudOn ? "Die ganze Gruppe trägt ein, auch ohne Netz" : "Läuft ohne Konto, alles bleibt auf deinem Gerät"}</li>
+              <li><span class="x-ic k-apero" aria-hidden="true">💱</span>In Euro zahlen, zum Tageskurs in Franken abrechnen</li>
+              <li><span class="x-ic k-mountain" aria-hidden="true">🤝</span>Am Schluss quitt mit so wenigen Zahlungen wie möglich</li>
             </ul>
             <div class="btn-row">
               <button type="button" class="btn primary" onClick=${onNew}>Reise anlegen</button>
               ${Store.cloudOn && html`<button type="button" class="btn" onClick=${onJoin}><${Icon} n="link" s=${18} />Mit Link beitreten</button>`}
             </div>
-          </section>`}
+          </section>
+          <${Meme} m=${{ tone: "idle", emoji: "🧙", top: "One does not simply", bottom: "eine Rechnung durch sieben teilen" }} />`}
       ${!Store.cloudOn && html`
         <section class="tip plain" aria-label="Gemeinsam speichern">
-          <span class="x-ic"><${Icon} n="people" /></span>
+          <span class="x-ic k-lodging" aria-hidden="true">👯</span>
           <div class="tip-body">
             <strong>Gemeinsam speichern</strong>
             <p>${Store.configState === "off"
@@ -395,9 +412,11 @@
       : state === "quota" ? ["Kontingent aufgebraucht", "Das kostenlose Tageskontingent von Firebase ist aufgebraucht. Am Morgen wird es wieder frei, dann lädt die Reise von selbst."]
       : ["Reise nicht erreichbar", "Ohne Netz erscheinen nur Reisen, die dieses Gerät schon einmal geladen hat. Sobald du wieder online bist, lädt sie von selbst."];
     const waits = state !== null && state !== "unconfigured";
+    const face = state === undefined ? "⏳" : gone ? "🕳️" : state === "denied" ? "🔒" : state === "quota" ? "😴" : state === "offline" ? "📡" : "🧰";
     return html`
       <div class="top"><button type="button" class="back" onClick=${onBack}><${Icon} n="back" />Reisen</button></div>
       <section class="empty" aria-live="polite">
+        <span class="empty-e" aria-hidden="true">${face}</span>
         <h2>${text[0]}</h2>
         <p>${text[1]}</p>
         ${state !== undefined && waits && html`<p class="meta">Die Ferienkasse versucht es von selbst wieder.</p>`}
@@ -636,8 +655,9 @@
     const withDraft = () => {
       const n = draft.trim();
       if (!n || people.some(p => p.name.toLowerCase() === n.toLowerCase())) return people;
-      return people.concat({ k: Store.randomId(8, "m"), name: n });
+      return people.concat({ k: Store.randomId(8, "m"), name: n, a: FK.pickAvatar(people.map(p => p.a)) });
     };
+    const reroll = () => { const used = []; setPeople(people.map(p => { const a = FK.pickAvatar(used); used.push(a); return Object.assign({}, p, { a }); })); };
     const add = () => {
       const n = draft.trim();
       if (!n) return;
@@ -654,7 +674,7 @@
       if (list.length < 2) { setErr("Trag mindestens zwei Personen ein."); return; }
       const mine = me && list.some(p => p.k === me) ? me : null;
       const members = {};
-      list.forEach((p, i) => { members[p.k] = { name: p.name, c: i % 8, o: i, gone: false }; });
+      list.forEach((p, i) => { members[p.k] = { name: p.name, c: i % 8, o: i, gone: false, a: p.a }; });
       lock.current = true; setBusy(true);
       const id = await act.createTrip({ name: name.trim(), base, rates: {}, members, created: Date.now() });
       lock.current = false; setBusy(false);
@@ -675,17 +695,18 @@
           </div>
           ${people.length > 0 && html`
             <div class="chips">${people.map((p, i) => html`
-              <span key=${p.k} class="chip static"><${Av} m=${{ name: p.name, c: i }} s=${1} />${p.name}
+              <span key=${p.k} class="chip static"><${Av} m=${{ name: p.name, c: i, a: p.a }} s=${1} />${p.name}
                 <button type="button" class="rm" aria-label=${p.name + " entfernen"} onClick=${() => { setPeople(people.filter(x => x.k !== p.k)); if (me === p.k) setMe(null); }}><${Icon} n="close" s=${14} /></button>
               </span>`)}
             </div>`}
-          <p class="hint">Trag auch dich selbst ein. Später kommen jederzeit weitere Personen dazu.</p>
+          ${people.length > 0 && html`<div><button type="button" class="btn small" onClick=${reroll}><span class="emo" aria-hidden="true">🎲</span>Avatare neu würfeln</button></div>`}
+          <p class="hint">Trag auch dich selbst ein. Später kommen jederzeit weitere Personen dazu, und jede Person wählt ihren Avatar selbst.</p>
         </div>
         ${people.length > 0 && html`
           <div class="field">
             <span class="label" id="fk-trip-me">Wer davon bist du?</span>
             <div class="chips" role="radiogroup" aria-labelledby="fk-trip-me">${people.map((p, i) => html`
-              <button type="button" key=${p.k} role="radio" aria-checked=${String(me === p.k)} class="chip" onClick=${() => setMe(p.k)}><${Av} m=${{ name: p.name, c: i }} s=${1} />${p.name}</button>`)}
+              <button type="button" key=${p.k} role="radio" aria-checked=${String(me === p.k)} class="chip" onClick=${() => setMe(p.k)}><${Av} m=${{ name: p.name, c: i, a: p.a }} s=${1} />${p.name}</button>`)}
             </div>
           </div>`}
         <div class="field">
@@ -702,7 +723,7 @@
   }
 
   /* ---------- trip settings ---------- */
-  function TripEdit({ trip, mode, list, loading, meId, setMe, act, onClose, onDelete, onLeave, onPublish }) {
+  function TripEdit({ trip, mode, list, loading, meId, setMe, act, onClose, onDelete, onLeave, onPublish, onAvatar }) {
     const all = membersOf(trip, true), ms = all.filter(m => !m.gone);
     const [name, setName] = useState(trip.name || "");
     const [names, setNames] = useState({});
@@ -721,7 +742,7 @@
       if (!n) return;
       if (ms.some(m => m.name.toLowerCase() === n.toLowerCase())) { setErr("«" + n + "» ist schon dabei. Nimm bei gleichen Namen einen Zusatz."); return; }
       const o = all.reduce((x, m) => Math.max(x, m.o), -1) + 1;
-      act.patchTrip(trip.id, { members: { [Store.randomId(8, "m")]: { name: n, c: all.length % 8, o, gone: false } } });
+      act.patchTrip(trip.id, { members: { [Store.randomId(8, "m")]: { name: n, c: all.length % 8, o, gone: false, a: FK.pickAvatar(all.map(m => m.a)) } } });
       setDraft(""); setErr(null);
     };
     const remove = m => {
@@ -746,7 +767,7 @@
           <span class="label">Mitreisende</span>
           <div class="rows">${ms.map(m => html`
             <div class="row" key=${m.id}>
-              <${Av} m=${m} />
+              <button type="button" class="av-btn" aria-label=${"Avatar von " + m.name + " ändern"} onClick=${() => onAvatar(m.id)}><${Av} m=${m} /></button>
               <input id=${"fk-set-m-" + m.id} class="input name" maxlength="30" aria-label=${"Name von " + m.name} value=${names[m.id] == null ? m.name : names[m.id]}
                 onInput=${e => setNames(Object.assign({}, names, { [m.id]: e.target.value }))} onBlur=${() => saveMember(m)} />
               <button type="button" class="chip" aria-pressed=${String(meId === m.id)} onClick=${() => setMe(m.id)}>${meId === m.id ? "Das bin ich" : "Ich"}</button>
@@ -758,6 +779,7 @@
               onKeyDown=${e => { if (e.key === "Enter") { e.preventDefault(); add(); } }} />
             <button type="button" class="btn" onClick=${add}>Hinzufügen</button>
           </div>
+          <p class="hint">Tippe auf ein Bild, um den Avatar zu ändern.</p>
         </div>
         <div class="field">
           <label for="fk-set-base">Abrechnen in</label>
@@ -781,6 +803,50 @@
           <${DeleteButton} label=${mode === "cloud" ? "Reise für alle löschen" : "Reise löschen"} onConfirm=${onDelete} disabled=${!!loading} />
           <p class="meta">Löschen entfernt die Reise mit allen Buchungen${mode === "cloud" ? ", für die ganze Gruppe" : ""}.</p>
         </div>
+      <//>`;
+  }
+
+  /* ---------- avatar ---------- */
+  /* An emoji and one of eight colours. The choice is part of the trip, so everybody in the group sees it. */
+  function AvatarSheet({ trip, member, isMe, act, onClose, say }) {
+    const [a, setA] = useState(member.a);
+    const [c, setC] = useState((member.c || 0) % 8);
+    const [busy, setBusy] = useState(false);
+    const lock = useRef(false);
+    const taken = useMemo(() => membersOf(trip).filter(m => m.id !== member.id).map(m => m.a), [trip, member.id]);
+    const cur = FK.avatar(a);
+    const dice = () => { setA(FK.pickAvatar(taken.concat(a))); setC(Math.floor(Math.random() * 8)); };
+    const save = async () => {
+      if (lock.current) return;
+      lock.current = true; setBusy(true);
+      const ok = await act.patchTrip(trip.id, { members: { [member.id]: { a, c } } });
+      lock.current = false; setBusy(false);
+      if (ok) { onClose(); say(isMe ? "Avatar gespeichert. Steht dir." : "Avatar gespeichert."); }
+    };
+    return html`
+      <${Sheet} title=${isMe ? "Dein Avatar" : "Avatar von " + member.name} onClose=${onClose} action=${html`<button type="button" class="btn primary small" disabled=${busy} onClick=${save}>Speichern</button>`}>
+        <div class="av-stage">
+          <${Av} m=${{ name: member.name, c, a }} s=${3} />
+          <strong>${member.name}</strong>
+          <span class="hint" aria-live="polite">${cur ? cur.label : ""}</span>
+          <button type="button" class="btn small" onClick=${dice}><span class="emo" aria-hidden="true">🎲</span>Würfeln</button>
+        </div>
+        <div class="field">
+          <span class="label" id="fk-av-c">Farbe</span>
+          <div class="swatches" role="radiogroup" aria-labelledby="fk-av-c">${COLOR_NAMES.map((name, i) => html`
+            <button type="button" key=${i} role="radio" aria-checked=${String(c === i)} aria-label=${name} title=${name} class=${"swatch c" + (i + 1)} onClick=${() => setC(i)}></button>`)}
+          </div>
+        </div>
+        ${FK.AVATARS.map((g, gi) => html`
+          <div class="field" key=${g.title}>
+            <span class="label" id=${"fk-av-g" + gi}>${g.title}</span>
+            <div class="av-grid" role="radiogroup" aria-labelledby=${"fk-av-g" + gi}>${g.items.map(it => html`
+              <button type="button" key=${it[0]} role="radio" aria-checked=${String(a === it[0])} aria-label=${it[2] + (taken.indexOf(it[0]) >= 0 ? " (schon vergeben)" : "")} title=${it[2]}
+                class=${"av-pick" + (taken.indexOf(it[0]) >= 0 ? " taken" : "")} onClick=${() => setA(it[0])}>${it[1]}</button>`)}
+            </div>
+          </div>`)}
+        <p class="hint">Blasse Bilder hat schon jemand aus der Gruppe. Nehmen darfst du sie trotzdem.</p>
+        <div class="foot"><button type="button" class="btn primary block" disabled=${busy} onClick=${save}>Speichern</button></div>
       <//>`;
   }
 
@@ -907,7 +973,7 @@
         <div class="field">
           <span class="label" id="fk-cat-l">Kategorie</span>
           <div class="chips" role="radiogroup" aria-labelledby="fk-cat-l">${FK.CATS.map(c => html`
-            <button type="button" key=${c.id} role="radio" aria-checked=${String(d.cat === c.id)} class="chip" onClick=${() => set({ cat: c.id })}><${Icon} n=${c.id} s=${18} />${c.label}</button>`)}
+            <button type="button" key=${c.id} role="radio" aria-checked=${String(d.cat === c.id)} class="chip" onClick=${() => set({ cat: c.id })}><span class="emo" aria-hidden="true">${c.emoji}</span>${c.label}</button>`)}
           </div>
         </div>
         <div class="field">
@@ -1092,6 +1158,7 @@
     if (expenses === null) return html`<p class="status" role="status">Buchungen werden geladen …</p>`;
     if (!groups.length) return html`
       <section class="empty">
+        <span class="empty-e" aria-hidden="true">🧾</span>
         <h2>Noch keine Ausgaben</h2>
         <p>${canEdit ? "Tippe unten auf «Ausgabe» und trag die erste ein. Fremdwährungen rechnet die Ferienkasse zum Tageskurs um." : "Sobald jemand eine Ausgabe erfasst, erscheint sie hier."}</p>
       </section>`;
@@ -1099,7 +1166,7 @@
       const s = FK.shares(e, trip), payer = who(e.payer), foreign = e.cur !== base;
       let icon, title, sub, top, small, smallCls = "";
       if (e.kind === "transfer") {
-        icon = "swap"; title = payer.name + " → " + who(e.to).name; sub = "Zahlung" + (foreign ? " · " + FK.money(e.amount, e.cur) : "");
+        icon = "pay"; title = payer.name + " → " + who(e.to).name; sub = "Zahlung" + (foreign ? " · " + FK.money(e.amount, e.cur) : "");
         top = s ? FK.money(s.total, base) : FK.money(e.amount, e.cur);
         small = s ? (meId === e.payer ? "von dir" : meId === e.to ? "an dich" : "") : "Kurs fehlt";
       } else {
@@ -1111,7 +1178,7 @@
       }
       if (!s) smallCls = "neg";
       const inner = html`
-        <span class="x-ic"><${Icon} n=${icon} /></span>
+        <span class=${"x-ic k-" + icon} aria-hidden="true">${icon === "pay" ? "🤝" : FK.catEmoji(icon)}</span>
         <span class="x-main"><span class="x-t">${title}</span><span class="x-s">${sub}</span></span>
         <span class="x-a"><span>${top}</span>${small && html`<small class=${smallCls}>${small}</small>`}</span>`;
       return canEdit
@@ -1138,7 +1205,11 @@
     };
     const canShare = typeof navigator.share === "function";
     const share = () => { navigator.share({ text: FK.summaryText(trip, bal, plan) }).catch(() => {}); };
+    const meme = FK.meme({ net: meId && bal.per[meId] ? bal.per[meId].net : null, base, count: bal.count, payments: plan.payments.length, seed: trip.id });
+    const square = bal.count > 0 && plan.payments.length === 0 && !bal.missing;
     return html`
+      ${square && html`<${Confetti} />`}
+      <${Meme} m=${meme} />
       ${bal.missing > 0 && html`
         <div class="note warn"><${Icon} n="swap" /><div>${bal.missing === 1 ? "Eine Buchung hat" : bal.missing + " Buchungen haben"} keinen Wechselkurs und ${bal.missing === 1 ? "fehlt" : "fehlen"} in der Abrechnung. Öffne sie in der Liste und trag den Kurs ein.</div></div>`}
       <section class="panel">
@@ -1192,7 +1263,7 @@
     const aw = useMemo(() => FK.awards(trip, expenses || [], bal), [trip, expenses, bal]);
     const all = useMemo(() => (mine ? FK.stats(trip, expenses || [], null) : st), [trip, expenses, mine, st]);
     if (!all.count) return html`
-      <section class="empty"><h2>Noch keine Zahlen</h2><p>Sobald Ausgaben erfasst sind, siehst du hier, wofür das Geld weggeht, was jeder Tag gekostet hat und wer welchen Stempel verdient.</p></section>`;
+      <section class="empty"><span class="empty-e" aria-hidden="true">📊</span><h2>Noch keine Zahlen</h2><p>Sobald Ausgaben erfasst sind, siehst du hier, wofür das Geld weggeht, was jeder Tag gekostet hat und wer welchen Stempel verdient.</p></section>`;
     const catMax = st.cats.length ? st.cats[0].amount : 0;
     const dayMax = st.days.reduce((m, d) => Math.max(m, d.amount), 0), top = FK.niceMax(dayMax);
     const peak = st.days.reduce((b, d, i) => (b == null || d.amount > st.days[b].amount ? i : b), null);
@@ -1201,7 +1272,9 @@
     const nDays = st.days.length, every = nDays <= 16 ? 1 : nDays <= 32 ? 2 : 5;
     const pids = Object.keys(bal.per).filter(id => bal.per[id].share > 0 || bal.per[id].paid > 0).sort((a, b) => bal.per[b].share - bal.per[a].share);
     const pMax = pids.reduce((m, id) => Math.max(m, bal.per[id].share), 0);
+    const boom = FK.memeTotal(all.total, base);
     return html`
+      ${boom && html`<${Meme} m=${boom} />`}
       ${meId && html`
         <div class="seg onbg" role="group" aria-label="Auswertung für">
           <button type="button" aria-pressed=${String(!mine)} onClick=${() => { setScope("all"); setHot(null); }}>Ganze Gruppe</button>
@@ -1220,7 +1293,7 @@
           <div class="panel-head"><h2 class="sec-h">Nach Kategorie</h2></div>
           <div class="bars">${st.cats.map(c => html`
             <div class="bar" key=${c.id}>
-              <span class="bar-l"><${Icon} n=${c.id} s=${18} />${c.label}</span>
+              <span class="bar-l"><span class="emo" aria-hidden="true">${FK.catEmoji(c.id)}</span>${c.label}</span>
               <span class="bar-v">${FK.num(c.amount, base)}<small>${Math.round(c.amount / st.total * 100)} %</small></span>
               <span class="bar-t" aria-hidden="true"><i class="bar-f" style=${"display:block;width:" + (c.amount / catMax * 100).toFixed(2) + "%"}></i></span>
             </div>`)}
@@ -1267,14 +1340,14 @@
           ? html`<p>Ab drei Ausgaben gibt es Stempel: für die Spendierhose, den Feinschmecker, den Sparfuchs und andere.</p>`
           : html`<div class="stamps">${aw.map((a, i) => html`
               <div class=${"stamp s" + (i % 4 + 1)} key=${a.id} style=${"--rot:" + ROT[i % ROT.length] + "deg"}>
-                <span class="stamp-t">${a.title}</span><span class="stamp-w">${a.who}</span><span class="stamp-n">${a.note}</span>
+                <span class="stamp-e" aria-hidden="true">${a.emoji}</span><span class="stamp-t">${a.title}</span><span class="stamp-w">${a.who}</span><span class="stamp-n">${a.note}</span>
               </div>`)}
             </div>`}
       </section>`;
   }
 
   /* ---------- trip view ---------- */
-  const TABS = [["list", "Ausgaben", "list"], ["settle", "Abrechnung", "scale"], ["stats", "Statistik", "chart"]];
+  const TABS = [["list", "Ausgaben", "🧾"], ["settle", "Abrechnung", "⚖️"], ["stats", "Statistik", "📊"]];
   function TripView({ trip, mode, expenses, meId, canEdit, tab, setTab, onBack, open, setMe, say, note }) {
     const ms = useMemo(() => membersOf(trip), [trip]);
     const byId = useMemo(() => { const o = {}; membersOf(trip, true).forEach(m => { o[m.id] = m; }); return o; }, [trip]);
@@ -1287,6 +1360,7 @@
     }, [expenses]);
     const [pick, setPick] = useState(false);
     const base = trip.base, my = meId && bal.per[meId] ? bal.per[meId].net : null;
+    const meM = meId ? ms.find(m => m.id === meId) || null : null;
     /* The bar at the bottom works like in a phone app: every view starts at its top, and a tap on the open one leads back up. */
     const pickTab = id => { if (id !== tab) setTab(id); try { window.scrollTo(0, 0); } catch (e) { /* nothing to scroll */ } };
     return html`
@@ -1308,6 +1382,9 @@
             <span class="avs" aria-hidden="true">${ms.slice(0, 8).map(m => html`<${Av} key=${m.id} m=${m} s=${1} />`)}</span>
           </div>
         </div>
+        ${meM
+          ? html`<button type="button" class="me" aria-label=${meM.chosen ? "Deinen Avatar ändern" : "Deinen Avatar wählen"} onClick=${() => open({ t: "avatar", m: meM.id })}><${Av} m=${meM} s=${2} /><span class="pen" aria-hidden="true"><${Icon} n="pen" s=${15} /></span></button>`
+          : html`<button type="button" class="me" aria-label="Zuerst deinen Namen wählen" aria-expanded=${String(pick)} onClick=${() => setPick(!pick)}><span class="ask" aria-hidden="true">?</span></button>`}
         <div class="ticket-stub">
           <div class="cell"><span class="eyebrow">Total ${base}</span><span class="fig">${FK.num(bal.total, base)}</span><span class="fig-note">${bal.count === 1 ? "1 Ausgabe" : bal.count + " Ausgaben"}</span></div>
           <div class="cell"><span class="eyebrow">Mein Saldo</span>
@@ -1321,11 +1398,11 @@
         <section class="who">
           <span class="label" id="fk-who-l">Tippe auf deinen Namen</span>
           <div class="chips" role="radiogroup" aria-labelledby="fk-who-l">${ms.map(m => html`
-            <button type="button" key=${m.id} role="radio" aria-checked="false" class="chip" onClick=${() => { setMe(m.id); setPick(false); }}><${Av} m=${m} s=${1} />${m.name}</button>`)}
+            <button type="button" key=${m.id} role="radio" aria-checked="false" class="chip" onClick=${() => { setMe(m.id); setPick(false); open({ t: "avatar", m: m.id }); }}><${Av} m=${m} s=${1} />${m.name}</button>`)}
           </div>
         </section>`}
       <div class="tabs" role="tablist" aria-label="Ansicht">${TABS.map(([id, label, icon]) => html`
-        <button type="button" key=${id} role="tab" id=${"fk-tab-" + id} aria-selected=${String(tab === id)} class="tab" onClick=${() => pickTab(id)}><${Icon} n=${icon} s=${22} /><span>${label}</span></button>`)}
+        <button type="button" key=${id} role="tab" id=${"fk-tab-" + id} aria-selected=${String(tab === id)} class="tab" onClick=${() => pickTab(id)}><span class="tab-e" aria-hidden="true">${icon}</span><span>${label}</span></button>`)}
       </div>
       <div class="stack" role="tabpanel" aria-labelledby=${"fk-tab-" + tab} style="gap:16px">
         ${tab === "list" && html`<${ExpenseList} trip=${trip} expenses=${expenses} who=${who} meId=${meId} nActive=${ms.length} canEdit=${canEdit}
@@ -1523,7 +1600,6 @@
       return () => { alive = false; if (t) clearTimeout(t); };
     }, [ask]);
     useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(null), toast.kind === "err" ? 6500 : 3200); return () => clearTimeout(t); }, [toast]);
-    useEffect(() => { document.documentElement.classList.toggle("locked", !!sheet); return () => document.documentElement.classList.remove("locked"); }, [sheet]);
 
     const fail = useCallback(e => {
       say(FAIL[e && e.code] || "Speichern fehlgeschlagen. Prüf die Verbindung und versuch es nochmal.", "err");
@@ -1620,6 +1696,12 @@
       else if (trip && sheet.t === "invite") sheetEl = mode === "cloud" ? html`<${InviteSheet} key=${sheet.k} trip=${trip} onClose=${close} say=${say} />`
         : Store.cloudOn ? html`<${ShareSheet} key=${sheet.k} onClose=${close} onPublish=${() => publish(trip.id, trip.name)} />`
         : html`<${SetupSheet} key=${sheet.k} onClose=${close} say=${say} />`;
+      else if (trip && sheet.t === "avatar") {
+        const mem = membersOf(trip, true).find(m => m.id === sheet.m);
+        /* Opened from the trip settings, it leads back there. */
+        if (mem) sheetEl = html`<${AvatarSheet} key=${sheet.k} trip=${trip} member=${mem} isMe=${mem.id === meId} act=${act} say=${say}
+          onClose=${sheet.back ? () => setSheet({ t: sheet.back, k: newId() }) : close} />`;
+      }
       else if (trip && sheet.t === "expense") sheetEl = html`<${ExpenseForm} key=${sheet.k} trip=${trip} expense=${sheet.e || null} meId=${meId} act=${act} onClose=${close} say=${say} />`;
       else if (trip && sheet.t === "transfer") sheetEl = html`<${TransferForm} key=${sheet.k} trip=${trip} transfer=${sheet.e || null} preset=${sheet.preset} meId=${meId} act=${act} onClose=${close} say=${say} />`;
       else if (trip && sheet.t === "trip-edit") sheetEl = html`<${TripEdit} key=${sheet.k} trip=${trip} mode=${mode} list=${expenses || []} loading=${expenses === null} meId=${meId} setMe=${setMe} act=${act} onClose=${close}
@@ -1629,8 +1711,12 @@
           if (await a.removeTrip(tid, list)) { Store.registry.remove(tid); refreshReg(); say("Reise gelöscht."); }
         }}
         onLeave=${() => { const tid = trip.id; goHome(); Store.registry.remove(tid); refreshReg(); say("Reise von diesem Gerät entfernt."); }}
-        onPublish=${() => publish(trip.id, trip.name)} />`;
+        onPublish=${() => publish(trip.id, trip.name)}
+        onAvatar=${id => setSheet({ t: "avatar", m: id, back: "trip-edit", k: newId() })} />`;
     }
+    /* The page behind a sheet does not scroll. Bound to what is really shown: a sheet whose trip has gone must not leave the page stuck. */
+    const sheetShown = !!sheetEl;
+    useEffect(() => { document.documentElement.classList.toggle("locked", sheetShown); return () => document.documentElement.classList.remove("locked"); }, [sheetShown]);
 
     /* While online, a trip that stays unreachable gets the server's own reason if it has one. */
     const gate = raw === "offline" && online && trouble && GATE[trouble] ? GATE[trouble] : raw;
@@ -1657,7 +1743,7 @@
     const toList = () => { ls.set("fk.last", ""); try { history.replaceState(null, "", HOME_URL); } catch (e) { /* reload anyway */ } location.reload(); };
     return html`
       <div class="wrap">
-        <header class="brand"><h1>Ferienkasse</h1></header>
+        <header class="brand"><h1><span class="logo" aria-hidden="true">🏝️</span><span class="word">Ferienkasse</span></h1></header>
         <div class="note warn" role="alert"><${Icon} n="close" /><div><strong>Da ist etwas schiefgelaufen.</strong> Alles, was schon gespeichert war, ist noch da.</div></div>
         <div class="btn-row">
           <button type="button" class="btn primary" onClick=${() => location.reload()}>Neu laden</button>

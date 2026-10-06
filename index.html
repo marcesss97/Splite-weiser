@@ -8,8 +8,8 @@
 <title>Ferienkasse</title>
 <meta name="description" content="Gemeinsame Reisekasse: Ausgaben erfassen, zum Tageskurs umrechnen und am Schluss mit wenigen Zahlungen quitt sein.">
 <meta name="robots" content="noindex, nofollow">
-<meta name="theme-color" content="#ECEFF4" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0D111E" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#FFF3DC" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#140E24" media="(prefers-color-scheme: dark)">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Ferienkasse">
@@ -18,12 +18,13 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preload" href="fredoka-var.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div id="app">
   <div class="wrap">
-    <header class="brand"><h1>Ferienkasse</h1><p>Wer hat was bezahlt, und wer schuldet wem?</p></header>
+    <header class="brand"><h1><span class="logo" aria-hidden="true">🏝️</span><span class="word">Ferienkasse</span></h1><p>Wer hat was bezahlt, und wer schuldet wem?</p></header>
     <p class="status" id="boot-status" role="status">Ferienkasse wird geladen …</p>
     <noscript><p class="status">Die Ferienkasse braucht JavaScript. Schalte es im Browser ein und lade die Seite neu.</p></noscript>
   </div>

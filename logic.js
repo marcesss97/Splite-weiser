@@ -4,15 +4,15 @@ window.FK = (function () {
   var LOCALE = "de-CH";
 
   var CATS = [
-    { id: "food", label: "Restaurant" },
-    { id: "apero", label: "Apéro & Bar" },
-    { id: "groceries", label: "Einkauf" },
-    { id: "lodging", label: "Unterkunft" },
-    { id: "transport", label: "Transport" },
-    { id: "mountain", label: "Berg & Ski" },
-    { id: "activity", label: "Aktivitäten" },
-    { id: "shopping", label: "Shopping" },
-    { id: "other", label: "Sonstiges" }
+    { id: "food", label: "Restaurant", emoji: "🍝" },
+    { id: "apero", label: "Apéro & Bar", emoji: "🍻" },
+    { id: "groceries", label: "Einkauf", emoji: "🛒" },
+    { id: "lodging", label: "Unterkunft", emoji: "🏡" },
+    { id: "transport", label: "Transport", emoji: "🚗" },
+    { id: "mountain", label: "Berg & Ski", emoji: "🏔️" },
+    { id: "activity", label: "Aktivitäten", emoji: "🎟️" },
+    { id: "shopping", label: "Shopping", emoji: "🛍️" },
+    { id: "other", label: "Sonstiges", emoji: "✨" }
   ];
   var CURRENCIES = ["CHF", "EUR", "USD", "GBP", "SEK", "NOK", "DKK", "ISK", "CZK", "PLN", "HUF", "RON", "TRY", "MAD", "EGP", "ZAR", "TZS", "KES", "AED", "THB", "VND", "IDR", "MYR", "SGD", "JPY", "CNY", "HKD", "KRW", "INR", "NPR", "LKR", "AUD", "NZD", "CAD", "MXN", "BRL", "ARS", "CLP", "PEN", "COP", "GEL"];
 
@@ -21,6 +21,52 @@ window.FK = (function () {
     return "Sonstiges";
   }
   function isCat(id) { return CATS.some(function (c) { return c.id === id; }); }
+  function catEmoji(id) {
+    for (var i = 0; i < CATS.length; i++) if (CATS[i].id === id) return CATS[i].emoji;
+    return "✨";
+  }
+
+  /* ---------- Avatare ---------- */
+  /* Jede Person hat ein Emoji als Profilbild. In der Reise steht die Kennung (links), nicht das Zeichen selbst: So bleibt alles
+     lesbar, auch wenn ein Gerät ein Emoji nicht kennt oder die Auswahl später wächst. Nur Emojis, die es seit 2020 gibt. */
+  var AVATARS = [
+    { title: "Tiere", items: [
+      ["lama", "🦙", "Lama"], ["faultier", "🦥", "Faultier"], ["pinguin", "🐧", "Pinguin"], ["flamingo", "🦩", "Flamingo"], ["oktopus", "🐙", "Oktopus"], ["frosch", "🐸", "Frosch"],
+      ["affe", "🐵", "Affe"], ["fuchs", "🦊", "Fuchs"], ["panda", "🐼", "Panda"], ["koala", "🐨", "Koala"], ["igel", "🦔", "Igel"], ["otter", "🦦", "Otter"],
+      ["eule", "🦉", "Eule"], ["ente", "🦆", "Ente"], ["huhn", "🐔", "Huhn"], ["kuh", "🐮", "Kuh"], ["geiss", "🐐", "Geiss"], ["hund", "🐶", "Hund"],
+      ["katze", "😼", "Katze"], ["hai", "🦈", "Hai"], ["schnecke", "🐌", "Schnecke"], ["dino", "🦖", "Dino"], ["einhorn", "🦄", "Einhorn"], ["drache", "🐲", "Drache"]
+    ] },
+    { title: "Typen", items: [
+      ["cool", "😎", "Sonnenbrille"], ["nerd", "🤓", "Nerd"], ["party", "🥳", "Partylöwe"], ["cowboy", "🤠", "Cowboy"], ["inkognito", "🥸", "Inkognito"], ["geld", "🤑", "Geldgesicht"],
+      ["clown", "🤡", "Clown"], ["alien", "👽", "Alien"], ["roboter", "🤖", "Roboter"], ["geist", "👻", "Geist"], ["zombie", "🧟", "Zombie"], ["vampir", "🧛", "Vampir"],
+      ["zauberer", "🧙", "Zauberer"], ["ninja", "🥷", "Ninja"], ["held", "🦸", "Superheld"], ["teufel", "😈", "Teufelchen"], ["schaedel", "💀", "Totenkopf"], ["haufen", "💩", "Häufchen"],
+      ["moai", "🗿", "Moai"], ["mond", "🌚", "Mondgesicht"], ["sonne", "🌞", "Sonne"], ["schneemann", "⛄", "Schneemann"], ["krone", "👑", "Krone"], ["gehirn", "🧠", "Grosshirn"]
+    ] },
+    { title: "Essen und Trinken", items: [
+      ["pizza", "🍕", "Pizza"], ["avocado", "🥑", "Avocado"], ["kartoffel", "🥔", "Kartoffel"], ["hotdog", "🌭", "Hotdog"], ["taco", "🌮", "Taco"], ["donut", "🍩", "Donut"],
+      ["gipfeli", "🥐", "Gipfeli"], ["kaese", "🧀", "Käse"], ["fondue", "🫕", "Fondue"], ["brezel", "🥨", "Brezel"], ["gurke", "🥒", "Gurke"], ["banane", "🍌", "Banane"],
+      ["ananas", "🍍", "Ananas"], ["chili", "🌶️", "Chili"], ["pilz", "🍄", "Pilz"], ["glace", "🍦", "Glace"], ["bier", "🍺", "Bier"], ["popcorn", "🍿", "Popcorn"]
+    ] },
+    { title: "Berge und Ferien", items: [
+      ["berg", "🏔️", "Berg"], ["gleitschirm", "🪂", "Gleitschirm"], ["ski", "⛷️", "Skifahrer"], ["snowboard", "🏂", "Snowboard"], ["gondel", "🚠", "Gondel"], ["zelt", "⛺", "Zelt"],
+      ["bus", "🚐", "Büssli"], ["kaktus", "🌵", "Kaktus"], ["palme", "🌴", "Palme"], ["rakete", "🚀", "Rakete"], ["ufo", "🛸", "Ufo"], ["regenbogen", "🌈", "Regenbogen"],
+      ["ballon", "🎈", "Ballon"], ["diamant", "💎", "Diamant"], ["feuer", "🔥", "Feuer"], ["kompass", "🧭", "Kompass"], ["anker", "⚓", "Anker"], ["wuerfel", "🎲", "Würfel"]
+    ] }
+  ];
+  var AV = Object.create(null), AV_IDS = [];
+  AVATARS.forEach(function (g) { g.items.forEach(function (it) { AV[it[0]] = { id: it[0], ch: it[1], label: it[2] }; AV_IDS.push(it[0]); }); });
+  function isAvatar(id) { return typeof id === "string" && AV[id] !== undefined; }
+  function avatar(id) { return isAvatar(id) ? AV[id] : null; }
+  function hash(str) { var h = 2166136261; for (var i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+  /* Wer noch keins gewählt hat, bekommt eines aus der Kennung der Person: auf allen Geräten dasselbe, ohne dass etwas gespeichert wird. */
+  function avatarFor(memberId) { return AV_IDS[hash(String(memberId)) % AV_IDS.length]; }
+  /* Ein zufälliges, das in der Gruppe noch niemand hat (solange der Vorrat reicht). */
+  function pickAvatar(taken, rnd) {
+    var used = Object.create(null);
+    (taken || []).forEach(function (id) { used[id] = 1; });
+    var free = AV_IDS.filter(function (id) { return !used[id]; }), pool = free.length ? free : AV_IDS;
+    return pool[Math.min(pool.length - 1, Math.floor((rnd || Math.random)() * pool.length))];
+  }
 
   /* ---------- Währungen und Zahlen ---------- */
   /* Nachkommastellen je Währung nach ISO 4217, fest hinterlegt. Browser weichen bei einigen Währungen voneinander ab,
@@ -327,10 +373,10 @@ window.FK = (function () {
       return best;
     }
     var a = top(function (id) { return bal.per[id].paid || null; });
-    if (a) out.push({ id: "spender", title: "Spendierhose", who: name(a.id), note: money(a.v, base) + " vorgestreckt" });
+    if (a) out.push({ id: "spender", emoji: "💸", title: "Spendierhose", who: name(a.id), note: money(a.v, base) + " vorgestreckt" });
 
     var big = xs.reduce(function (x, y) { return y.s.total > x.s.total ? y : x; });
-    out.push({ id: "big", title: "Grösste Runde", who: big.e.title || catLabel(big.e.cat), note: money(big.s.total, base) + ", bezahlt von " + name(big.e.payer) });
+    out.push({ id: "big", emoji: "🍾", title: "Grösste Runde", who: big.e.title || catLabel(big.e.cat), note: money(big.s.total, base) + ", bezahlt von " + name(big.e.payer) });
 
     function catShare(cats) {
       var t = {};
@@ -338,33 +384,79 @@ window.FK = (function () {
       return t;
     }
     var food = catShare(["food", "apero"]), f = top(function (id) { return food[id] || null; });
-    if (f) out.push({ id: "gourmet", title: "Feinschmecker", who: name(f.id), note: money(f.v, base) + " für Essen und Apéro" });
+    if (f) out.push({ id: "gourmet", emoji: "🍝", title: "Feinschmecker", who: name(f.id), note: money(f.v, base) + " für Essen und Apéro" });
 
     var mount = catShare(["mountain"]), g = top(function (id) { return mount[id] || null; });
-    if (g) out.push({ id: "summit", title: "Gipfelstürmer", who: name(g.id), note: money(g.v, base) + " für Berg und Ski" });
+    if (g) out.push({ id: "summit", emoji: "🏔️", title: "Gipfelstürmer", who: name(g.id), note: money(g.v, base) + " für Berg und Ski" });
 
     var withShare = ids.filter(function (id) { return bal.per[id].share > 0; });
     if (withShare.length >= 3) {
       var s = top(function (id) { return bal.per[id].share > 0 ? bal.per[id].share : null; }, true);
-      if (s) out.push({ id: "saver", title: "Sparfuchs", who: name(s.id), note: "nur " + money(s.v, base) + " verbraucht" });
+      if (s) out.push({ id: "saver", emoji: "🦊", title: "Sparfuchs", who: name(s.id), note: "nur " + money(s.v, base) + " verbraucht" });
     }
 
     var byWho = {};
     xs.forEach(function (x) { if (x.e.by && m[x.e.by]) byWho[x.e.by] = (byWho[x.e.by] || 0) + 1; });
     var b = top(function (id) { return byWho[id] || null; });
-    if (b && b.v >= 2) out.push({ id: "clerk", title: "Buchhalter", who: name(b.id), note: b.v + " Ausgaben erfasst" });
+    if (b && b.v >= 2) out.push({ id: "clerk", emoji: "🤓", title: "Buchhalter", who: name(b.id), note: b.v + " Ausgaben erfasst" });
 
     var byDay = {};
     xs.forEach(function (x) { if (validDate(x.e.date)) byDay[x.e.date] = (byDay[x.e.date] || 0) + x.s.total; });
     var dk = Object.keys(byDay).sort();
     if (dk.length >= 2) {
       var d = dk.reduce(function (x, y) { return byDay[y] > byDay[x] ? y : x; });
-      out.push({ id: "day", title: "Teuerster Tag", who: fmtDate(d, { weekday: "long", day: "numeric", month: "long" }), note: money(byDay[d], base) + " an einem Tag" });
+      out.push({ id: "day", emoji: "🔥", title: "Teuerster Tag", who: fmtDate(d, { weekday: "long", day: "numeric", month: "long" }), note: money(byDay[d], base) + " an einem Tag" });
     }
 
     var small = xs.reduce(function (x, y) { return y.s.total < x.s.total ? y : x; });
-    if (small !== big) out.push({ id: "small", title: "Kleinvieh", who: small.e.title || catLabel(small.e.cat), note: money(small.s.total, base) + ", macht auch Mist" });
+    if (small !== big) out.push({ id: "small", emoji: "🐜", title: "Kleinvieh", who: small.e.title || catLabel(small.e.cat), note: money(small.s.total, base) + ", macht auch Mist" });
     return out;
+  }
+
+  /* ---------- Meme-Karten ---------- */
+  /* Sprüche, die fast alle kennen, passend zum Stand der Kasse. Gibt es mehrere passende, entscheiden Reise und Tag: Die Karte
+     bleibt also einen Tag lang dieselbe und springt nicht bei jedem Tippen. o: { net, base, count, payments, total, seed, day }.
+     net ist der eigene Saldo (oder null, solange niemand gewählt ist), count die Zahl der Ausgaben, payments die Zahl der
+     Zahlungen, mit denen alle quitt wären. Ergebnis: { tone, emoji, top, bottom }. */
+  function meme(o) {
+    o = o || {};
+    var base = o.base || "CHF", n = hash(String(o.seed || "") + "|" + String(o.day || today()));
+    function one(list) { return list[n % list.length]; }
+    function card(tone, emoji, top, bottom) { return { tone: tone, emoji: emoji, top: top, bottom: bottom }; }
+    if (!(o.count > 0)) return one([
+      card("idle", "🗿", "Noch keine Ausgaben", "Bruh."),
+      card("idle", "💀", "Ich, wie ich warte", "bis jemand die erste Runde zahlt"),
+      card("idle", "🧙", "One does not simply", "eine Rechnung durch sieben teilen")
+    ]);
+    if (typeof o.net === "number" && isFinite(o.net)) {
+      var amt = money(Math.abs(o.net), base);
+      if (o.net > 0) return one([
+        card("up", "📈", "Stonks", "Du bekommst " + amt),
+        card("up", "🚀", "To the moon", "Du bekommst " + amt),
+        card("up", "🖨️", "Money printer go brrr", "Du bekommst " + amt)
+      ]);
+      if (o.net < 0) return one([
+        card("down", "🔥", "This is fine.", "Du schuldest " + amt),
+        card("down", "📉", "Not stonks", "Du schuldest " + amt),
+        card("down", "💸", "Shut up and take my money!", "Du schuldest " + amt),
+        card("down", "⌨️", "Press F to pay", "Du schuldest " + amt)
+      ]);
+      return one([
+        card("even", "⚖️", "Perfectly balanced", "as all things should be"),
+        card("even", "🤝", "Du bist quitt", "Much fair. Very wow."),
+        card("even", "😎", "Du bist quitt", "Deal with it.")
+      ]);
+    }
+    if (!(o.payments > 0)) return card("even", "⚖️", "Perfectly balanced", "Alle sind quitt");
+    return one([
+      card("brain", "🧠", "Big brain time", (o.payments === 1 ? "Eine Zahlung" : o.payments + " Zahlungen") + ", und alle sind quitt"),
+      card("brain", "🧙", "One does not simply", "im Kopf abrechnen")
+    ]);
+  }
+  /* Für die Statistik: nur wenn das Total eine bekannte Schwelle sprengt. Sonst null. */
+  function memeTotal(total, base) {
+    var f = Math.pow(10, digits(base || "CHF"));
+    return total > 9000 * f ? { tone: "boom", emoji: "💥", top: "It's over 9000!", bottom: "Total " + money(total, base) } : null;
   }
 
   /* ---------- Text für den Gruppenchat ---------- */
@@ -420,7 +512,7 @@ window.FK = (function () {
     var members = {}, rates = {}, k, m;
     if (d.members && typeof d.members === "object") for (k in d.members) {
       m = d.members[k];
-      if (m && typeof m === "object" && okId(k)) members[k] = { name: text(m.name, 60).trim() || "?", c: Math.abs(Math.round(num0(m.c))) % 1000, o: num0(m.o), gone: !!m.gone };
+      if (m && typeof m === "object" && okId(k)) members[k] = { name: text(m.name, 60).trim() || "?", c: Math.abs(Math.round(num0(m.c))) % 1000, o: num0(m.o), gone: !!m.gone, a: isAvatar(m.a) ? m.a : "" };
     }
     if (d.rates && typeof d.rates === "object") for (k in d.rates) if (okRate(d.rates[k]) && /^[A-Z]{3}$/.test(k)) rates[k] = d.rates[k];
     return { id: id, name: text(d.name, 80).trim() || "Reise", base: d.base, rates: rates, members: members, created: num0(d.created) };
@@ -453,6 +545,7 @@ window.FK = (function () {
     today: today, validDate: validDate, addDays: addDays, dayDiff: dayDiff, fmtDate: fmtDate, dayLabel: dayLabel, rangeLabel: rangeLabel,
     allocate: allocate, memberIds: memberIds, weights: weights, rateFor: rateFor, shares: shares, preview: preview,
     balances: balances, settle: settle, netOf: netOf, stats: stats, niceMax: niceMax, awards: awards,
-    summaryText: summaryText, check: check, normTrip: normTrip, normExpense: normExpense, EXACT_MAX: EXACT_MAX, MAX_MINOR: MAX_MINOR
+    summaryText: summaryText, check: check, normTrip: normTrip, normExpense: normExpense,
+    catEmoji: catEmoji, AVATARS: AVATARS, isAvatar: isAvatar, avatar: avatar, avatarFor: avatarFor, pickAvatar: pickAvatar, meme: meme, memeTotal: memeTotal, EXACT_MAX: EXACT_MAX, MAX_MINOR: MAX_MINOR
   };
 })();

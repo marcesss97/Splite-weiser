@@ -1,13 +1,12 @@
 /* Ferienkasse: Service Worker. Hält eine Kopie der App-Dateien bereit, damit die Ferienkasse auch ohne Netz startet.
    Mit Netz fragt er bei jedem Start nach, ob es auf dem Server eine neuere Fassung gibt (so wirkt eine geänderte config.js sofort).
    Ohne Netz oder bei sehr langsamem Netz kommt die gespeicherte Kopie. Daten und Kurse laufen nicht über diese Kopie. */
-const CACHE = "ferienkasse-v2";
+const CACHE = "ferienkasse-v3";
 const FILES = [
   "./", "index.html", "style.css", "config.js", "logic.js", "store.js", "rates.js", "app.js",
   "vendor-preact.js", "vendor-qrcode.js", "vendor-firebase.js", "manifest.webmanifest", "favicon.svg",
   "icon-192.png", "icon-512.png", "icon-maskable-512.png", "apple-touch-icon.png",
-  "barlow-400.woff2", "barlow-500.woff2", "barlow-600.woff2", "barlow-condensed-600.woff2", "barlow-condensed-700.woff2",
-  "ibm-plex-mono-500.woff2", "ibm-plex-mono-600.woff2"
+  "fredoka-var.woff2", "anton-400.woff2", "ibm-plex-mono-500.woff2", "ibm-plex-mono-600.woff2"
 ];
 
 self.addEventListener("install", event => {
