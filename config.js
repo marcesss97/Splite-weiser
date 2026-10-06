@@ -22,7 +22,14 @@
    Diese Werte sind keine Passwörter. Sie sagen dem Browser nur, welches Firebase-Projekt gemeint ist.
    Geschützt werden die Daten durch die Regeln aus der Datei firestore.rules. */
 
-const firebaseConfig = null;
+const firebaseConfig = {
+  apiKey: "AIzaSyBoxXxX0WBFLoK4aDwSsf06fT0W8QTs6Uo",
+  authDomain: "splite-weiser-cf091.firebaseapp.com",
+  projectId: "splite-weiser-cf091",
+  storageBucket: "splite-weiser-cf091.firebasestorage.app",
+  messagingSenderId: "18964279601",
+  appId: "1:18964279601:web:03099143f60fe0e248c010"
+};
 
 /* Ab hier nichts ändern. */
 window.FERIENKASSE_CONFIG = { firebase: firebaseConfig };

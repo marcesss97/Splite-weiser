@@ -1,13 +1,15 @@
 /* Ferienkasse: Oberfläche. Speichert über FKStore (dieses Gerät oder Gruppen-Sync), holt Tageskurse über FKRates. */
 (function () {
   "use strict";
-  var root = document.getElementById("app"), P = window.htmPreact, FK = window.FK, Store = window.FKStore, Rates = window.FKRates, Scan = window.FKScan;
-  if (!P || !FK || !Store || !Rates || !Scan) {
+  var root = document.getElementById("app"), P = window.htmPreact, FK = window.FK, Store = window.FKStore, Rates = window.FKRates;
+  if (!P || !FK || !Store || !Rates) {
     var bs = document.getElementById("boot-status");
     if (bs) bs.textContent = "Die Ferienkasse konnte nicht geladen werden. Prüf die Verbindung und lade die Seite neu.";
     return;
   }
   const { html, render, useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback, useErrorBoundary } = P;
+  /* Earlier versions could read receipts with a key of the user's own. That is gone; a key still stored on this device is removed. */
+  try { localStorage.removeItem("fk.ai"); } catch (e) { /* nothing stored */ }
 
   /* ---------- small helpers ---------- */
   const ls = {
@@ -67,7 +69,6 @@
     check: ["M5 12.5l4.5 4.5L19 7"],
     arrow: ["M5 12h14M13 6l6 6-6 6"],
     sliders: ["M4 7h9M17 7h3M4 17h3M11 17h9", "M13 7a2 2 0 1 0 4 0a2 2 0 1 0-4 0", "M7 17a2 2 0 1 0 4 0a2 2 0 1 0-4 0"],
-    camera: ["M4 8h3.2l1.6-2.5h6.4L16.8 8H20a1 1 0 0 1 1 1v9.5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z", "M8.5 13.5a3.5 3.5 0 1 0 7 0a3.5 3.5 0 1 0-7 0"],
     copy: ["M9 9h10a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V10a1 1 0 0 1 1-1z", "M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"],
     trash: ["M4 7h16M9 7V4.5h6V7M6.5 7l.8 12a1 1 0 0 0 1 .9h7.4a1 1 0 0 0 1-.9l.8-12M10 11v5M14 11v5"],
     swap: ["M4 8h14l-3-3M20 16H6l3 3"],
@@ -456,13 +457,6 @@
       <//>`;
   }
 
-  const KEY_ERR = {
-    key: "Der Anbieter lehnt diesen Schlüssel ab. Prüf, ob er vollständig kopiert ist.",
-    rate: "Der Anbieter meldet: Kontingent aufgebraucht oder zu viele Anfragen. Der Schlüssel selbst stimmt.",
-    model: "Dieses Modell gibt es beim Anbieter nicht (mehr). Trag im Feld «Modell» ein aktuelles ein, die Namen stehen in der Dokumentation des Anbieters.",
-    busy: "Der Anbieter ist gerade überlastet. Versuch es gleich nochmal.",
-    network: "Keine Verbindung zum Anbieter. Prüf dein Netz."
-  };
   const SYNC_TEXT = {
     off: "Nicht eingeschaltet. Reisen liegen nur auf diesem Gerät. Mit dem Gruppen-Sync tragen alle ein, und alles wird laufend gemeinsam gespeichert. Die Anleitung führt Schritt für Schritt durch das Einrichten.",
     broken: "Nicht eingeschaltet: Die Datei config.js lässt sich nicht lesen, vermutlich wegen eines Tippfehlers. Ersetze darin nur die eine Zeile durch den Block aus der Firebase-Konsole, von «const firebaseConfig = {» bis «};». Das README zeigt ein Beispiel.",
@@ -505,6 +499,8 @@
       return /^[A-Za-z0-9._-]+$/.test(repo) ? "https://github.com/" + m[1] + "/" + repo + "/edit/main/" + file : null;
     } catch (e) { return null; }
   }
+  /* A page of the Firebase console. Without a known project the console first asks which one is meant ("_"). */
+  const consoleLink = page => "https://console.firebase.google.com/project/" + (Store.projectId ? encodeURIComponent(Store.projectId) : "_") + "/" + page;
   function SetupSheet({ onClose, say }) {
     const [rules, setRules] = useState(null);                         // null = still loading, "" = the file is not there
     const [shown, setShown] = useState(false);
@@ -539,18 +535,24 @@
           </div></li>
           <li><div class="step">
             <strong>Datenbank anlegen</strong>
-            <p>Im Menü «Firestore» öffnen (unter «Build» oder «Databases & Storage») und «Datenbank erstellen» wählen, englisch «Create database». Edition «Standard», die Kennung unverändert auf «(default)», Standort zum Beispiel Zürich (europe-west6), Start im Produktionsmodus.</p>
+            <p>Im Menü links «Datenbanken und Speicher» öffnen (englisch «Databases & Storage»), dann «Firestore», und «Datenbank erstellen» wählen («Create database»). Standort zum Beispiel Zürich (europe-west6), Start im Produktionsmodus («Production mode»). Fragt die Konsole nach Edition und Kennung: «Standard», und die Kennung unverändert auf «(default)».</p>
+            <a class="btn small" href=${consoleLink("firestore")} target="_blank" rel="noopener noreferrer"><${Icon} n="arrow" s=${16} />Firestore öffnen</a>
           </div></li>
           <li><div class="step">
             <strong>Regeln einsetzen</strong>
-            <p>In der Datenbank den Reiter «Regeln» öffnen («Rules»), den vorhandenen Text löschen, die Regeln der Ferienkasse einfügen und «Veröffentlichen» wählen («Publish»).</p>
-            ${rules !== "" && html`<button type="button" class="btn small" disabled=${rules === null} onClick=${copyRules}><${Icon} n="copy" s=${16} />Regeln kopieren</button>`}
+            <p>Zuerst hier die Regeln kopieren, dann den Regel-Editor öffnen. Dort den vorhandenen Text löschen, die Regeln einfügen und «Veröffentlichen» wählen («Publish»).</p>
+            <div class="btn-row">
+              ${rules !== "" && html`<button type="button" class="btn small" disabled=${rules === null} onClick=${copyRules}><${Icon} n="copy" s=${16} />Regeln kopieren</button>`}
+              <a class="btn small" href=${consoleLink("firestore/rules")} target="_blank" rel="noopener noreferrer"><${Icon} n="arrow" s=${16} />Regel-Editor öffnen</a>
+            </div>
+            <p>Von Hand: auf der Seite «Firestore» steht über der Datenansicht eine Reihe von Reitern, darunter «Regeln» («Rules»). Auf dem Handy lässt sich die Reihe seitlich schieben. Fehlen die Reiter, gibt es die Datenbank noch nicht: zurück zu Schritt 2.</p>
             ${rules === "" && html`<p>Die Regeln stehen in der Datei firestore.rules in deinem GitHub-Projekt.</p>`}
             ${shown && rules && html`<p>Kopieren hat nicht geklappt. Halte den Finger auf den Text und kopiere ihn von Hand:</p><pre class="code">${rules}</pre>`}
           </div></li>
           <li><div class="step">
             <strong>Web-App registrieren</strong>
-            <p>In der Projektübersicht auf das Symbol <span class="m">${"</>"}</span> (Web) tippen, einen Namen eingeben, «Firebase Hosting» nicht ankreuzen und «App registrieren» wählen. Firebase zeigt jetzt einen Block, der mit <span class="m">const firebaseConfig = {</span> beginnt und mit <span class="m">};</span> endet. Kopiere diesen Block.</p>
+            <p>In den Projekteinstellungen (Zahnrad) nach unten zu «Meine Apps» gehen («Your apps») und das Symbol <span class="m">${"</>"}</span> (Web) wählen. Einen Namen eingeben, «Firebase Hosting» nicht ankreuzen und «App registrieren» wählen («Register app»). Firebase zeigt jetzt einen Block, der mit <span class="m">const firebaseConfig = {</span> beginnt und mit <span class="m">};</span> endet. Kopiere diesen Block.</p>
+            <a class="btn small" href=${consoleLink("settings/general")} target="_blank" rel="noopener noreferrer"><${Icon} n="arrow" s=${16} />Projekteinstellungen öffnen</a>
           </div></li>
           <li><div class="step">
             <strong>Block in config.js einsetzen</strong>
@@ -582,24 +584,8 @@
       <//>`;
   }
 
-  function SettingsSheet({ onClose, say, onScanChange, onImported, onSetup, onInstall }) {
-    const first = useMemo(() => Scan.settings(), []);
-    const [key, setKey] = useState(first.key);
-    const [model, setModel] = useState(first.model);
-    const [state, setState] = useState(null);
+  function SettingsSheet({ onClose, onImported, onSetup, onInstall }) {
     const [err, setErr] = useState(null);
-    const prov = Scan.provider(key);
-    const check = () => {
-      if (!key.trim()) { setState({ ok: false, msg: "Füg zuerst einen Schlüssel ein." }); return; }
-      if (!prov) { setState({ ok: false, msg: "Das sieht nicht nach einem Schlüssel von Google AI Studio oder Anthropic aus. Prüf, ob er vollständig kopiert ist." }); return; }
-      if (!Scan.save(key, model)) { setState({ ok: false, msg: "Der Browser lässt das Speichern nicht zu (privater Modus?)." }); return; }
-      onScanChange(Scan.ready());
-      setState({ busy: true });
-      Scan.test().then(
-        r => setState({ ok: true, msg: "Funktioniert mit " + r.label + " (Modell " + r.model + "). Bei jeder neuen Ausgabe erscheint jetzt der Knopf «Beleg scannen»." }),
-        e => setState({ ok: false, msg: (KEY_ERR[e && e.code] || "Der Test ist fehlgeschlagen.") + (e && e.message && e.code !== "network" ? " Meldung des Anbieters: " + e.message : "") }));
-    };
-    const remove = () => { Scan.save("", ""); setKey(""); setModel(""); setState(null); onScanChange(false); say("Schlüssel von diesem Gerät entfernt."); };
     const onFile = ev => {
       const file = ev.target.files && ev.target.files[0];
       ev.target.value = "";
@@ -622,25 +608,6 @@
           ${Store.cloudOn && html`<${CloudCheck} />`}
           <div><button type="button" class=${"btn small" + (Store.cloudOn ? " ghost" : "")} onClick=${onSetup}>${Store.cloudOn ? "Anleitung zum Einrichten" : "Gruppen-Sync einrichten"}</button></div>
         </div>
-        <div class="field">
-          <label for="fk-ai-key">Beleg-Scan mit KI (freiwillig)</label>
-          <p class="hint">Mit einem eigenen Schlüssel liest die Ferienkasse Belege vom Foto. Es geht ein Schlüssel von Google AI Studio (beginnt mit <span class="m">AIza</span>) oder von Anthropic (beginnt mit <span class="m">sk-ant-</span>). Er bleibt in diesem Browser, und das Foto geht direkt an den Anbieter.</p>
-          <input id="fk-ai-key" class="input linkbox" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Schlüssel einfügen" value=${key}
-            onInput=${e => { setKey(e.target.value); setState(null); }} />
-          ${prov && html`<p class="hint">Erkannt: ${Scan.NAMES[prov]}.</p>`}
-        </div>
-        <div class="field">
-          <label for="fk-ai-model">Modell</label>
-          <input id="fk-ai-model" class="input linkbox" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder=${prov ? Scan.MODELS[prov] : "Standard"} value=${model}
-            onInput=${e => { setModel(e.target.value); setState(null); }} />
-          <p class="hint">Leer lassen für den Standard. Nur ändern, wenn der Anbieter das Standard-Modell nicht mehr anbietet.</p>
-        </div>
-        <div class="btn-row">
-          <button type="button" class="btn" disabled=${!!(state && state.busy)} onClick=${check}>Speichern und prüfen</button>
-          ${(first.key || key) && html`<button type="button" class="btn danger" onClick=${remove}>Schlüssel entfernen</button>`}
-        </div>
-        ${state && state.busy && html`<p class="hint" role="status">Schlüssel wird geprüft …</p>`}
-        ${state && state.msg && html`<p class=${state.ok ? "ok" : "err"} role="status">${state.msg}</p>`}
         <div class="field">
           <span class="label">Sicherung einlesen</span>
           <p class="hint">Eine heruntergeladene Sicherung wird als neue Reise auf diesem Gerät angelegt.</p>
@@ -819,15 +786,6 @@
 
   /* ---------- expense form ---------- */
   const MODES = [["equal", "Gleich"], ["shares", "Anteile"], ["exact", "Beträge"], ["items", "Positionen"]];
-  const SCAN_ERR = {
-    key: "Der KI-Schlüssel wurde abgelehnt. Prüf ihn in den Einstellungen auf der Startseite.",
-    rate: "Der KI-Dienst meldet: Kontingent aufgebraucht oder zu viele Anfragen. Versuch es später nochmal oder trag die Ausgabe von Hand ein.",
-    model: "Das eingestellte KI-Modell gibt es nicht mehr. Trag in den Einstellungen ein aktuelles Modell ein.",
-    busy: "Der KI-Dienst ist gerade überlastet. Versuch es gleich nochmal.",
-    network: "Keine Verbindung zum KI-Dienst. Prüf dein Netz oder trag die Ausgabe von Hand ein.",
-    image: "Dieses Bild lässt sich nicht lesen. Nimm ein Foto als JPG oder PNG.",
-    other: "Der Beleg konnte nicht gelesen werden. Versuch es nochmal oder trag die Ausgabe von Hand ein."
-  };
 
   function toDraft(e, trip, people, meId) {
     const sel = {}, sh = {}, ex = {};
@@ -880,7 +838,7 @@
     return e;
   }
 
-  function ExpenseForm({ trip, expense, meId, scanOn, act, onClose, say }) {
+  function ExpenseForm({ trip, expense, meId, act, onClose, say }) {
     const base = trip.base;
     const people = useMemo(() => {
       const ms = membersOf(trip), all = membersOf(trip, true), have = new Set(ms.map(m => m.id)), extra = [];
@@ -890,10 +848,8 @@
     const [d, setD] = useState(() => toDraft(expense, trip, people, meId));
     const [err, setErr] = useState(null);
     const [busy, setBusy] = useState(false);
-    const [scan, setScan] = useState(null);
-    const ctl = useRef(null), lock = useRef(false), slow = useSlow(busy);
+    const lock = useRef(false), slow = useSlow(busy);
     const set = patch => { setErr(null); setD(prev => Object.assign({}, prev, typeof patch === "function" ? patch(prev) : patch)); };
-    useEffect(() => () => { if (ctl.current) ctl.current.abort(); }, []);
 
     const foreign = d.cur !== base;
     const rate = foreign ? FK.parseRate(d.rateStr) : 1;
@@ -926,33 +882,6 @@
       if (ok) { onClose(); say("Ausgabe gelöscht."); }
     };
 
-    const onFile = async ev => {
-      const file = ev.target.files && ev.target.files[0];
-      ev.target.value = "";
-      if (!file || !scanOn) return;
-      const c = new AbortController(); ctl.current = c;
-      setScan({ status: "busy" }); setErr(null);
-      try {
-        const data = await Scan.scan(file, FK.receiptPrompt(base, FK.today()), c.signal);
-        if (c.signal.aborted) return;
-        const r = FK.parseReceipt(data, d.cur, FK.today());
-        if (!r) { setScan({ status: "error", msg: "Auf dem Foto war kein Beleg zu erkennen. Versuch es mit einem schärferen Foto oder trag die Ausgabe von Hand ein." }); return; }
-        setD(prev => {
-          const next = Object.assign({}, prev, { amountStr: FK.plain(r.amount, r.cur), cur: r.cur, cat: r.cat });
-          if (r.title) next.title = r.title;
-          if (r.date) next.date = r.date;
-          if (r.cur !== prev.cur) { next.rateStr = ""; next.rateMode = "auto"; next.rateInfo = null; }
-          if (r.items.length >= 2) { next.mode = "items"; next.items = r.items.map(it => ({ k: newId(), name: it.name, amountStr: FK.plain(it.amount, r.cur), for: {} })); }
-          return next;
-        });
-        setScan({ status: "done", n: r.items.length >= 2 ? r.items.length : 0 });
-      } catch (e) {
-        const code = e && e.code;
-        if (code === "cancelled") { setScan(null); return; }
-        setScan({ status: "error", msg: SCAN_ERR[code] || SCAN_ERR.other });
-      } finally { if (ctl.current === c) ctl.current = null; }
-    };
-
     const setItem = (k, patch) => set(prev => ({ items: prev.items.map(it => it.k === k ? Object.assign({}, it, patch) : it) }));
     const toggleItem = (it, id) => { const f = Object.assign({}, it.for); if (f[id]) delete f[id]; else f[id] = true; setItem(it.k, { for: f }); };
     const itemSum = d.items.reduce((a, it) => a + (FK.parseAmount(it.amountStr, d.cur) || 0), 0);
@@ -962,15 +891,6 @@
 
     return html`
       <${Sheet} title=${d.isNew ? "Neue Ausgabe" : "Ausgabe"} onClose=${onClose} error=${err} action=${html`<button type="button" class="btn primary small" disabled=${busy} onClick=${save}>Speichern</button>`}>
-        <div class="field" hidden=${!(scanOn || scan)}>
-            ${scan && scan.status === "busy"
-              ? html`<div class="scan-busy" role="status"><span class="spin" aria-hidden="true"></span><span>Beleg wird gelesen. Das dauert ein paar Sekunden.</span><button type="button" class="btn small" onClick=${() => ctl.current && ctl.current.abort()}>Stopp</button></div>`
-              : scanOn && html`
-                <input id="fk-scan" class="sr" type="file" accept="image/*" onChange=${onFile} />
-                <label class="btn" for="fk-scan"><${Icon} n="camera" />${scan && scan.status === "done" ? "Anderen Beleg scannen" : "Beleg scannen"}</label>`}
-            ${scan && scan.status === "error" && html`<p class="err" role="alert">${scan.msg}</p>`}
-            ${scan && scan.status === "done" && html`<p class="ok" role="status">${scan.n ? "Beleg gelesen, " + scan.n + " Positionen erkannt. Prüf den Betrag und tippe bei jeder Position an, wer sie hatte." : "Beleg gelesen. Prüf Betrag, Währung und Datum, bevor du speicherst."}</p>`}
-        </div>
         <div class="field">
           <label for="fk-amount">Betrag</label>
           <div class="amount-row">
@@ -1456,7 +1376,6 @@
     const [sheet, setSheet] = useState(null);
     const [toast, setToast] = useState(null);
     const [meMap, setMeMap] = useState(() => ls.get("fk.me", {}));
-    const [scanOn, setScanOn] = useState(() => Scan.ready());
     const sheetRef = useRef(null), tripRef = useRef(null), leaving = useRef(false);
     sheetRef.current = sheet; tripRef.current = tripId;
     const say = useCallback((msg, kind) => setToast({ msg, kind: kind || "ok", k: Date.now() }), []);
@@ -1691,7 +1610,7 @@
       if (sheet.t === "trip-new") sheetEl = html`<${TripNew} key=${sheet.k} act=${act} onClose=${close}
         onCreated=${(id, mine) => { if (mine) rememberMe(id, mine); showTrip(id, true); say("Reise angelegt. Jetzt die erste Ausgabe erfassen."); }} />`;
       else if (sheet.t === "join") sheetEl = html`<${JoinSheet} key=${sheet.k} onClose=${close} onJoin=${id => { join(id, true); }} />`;
-      else if (sheet.t === "settings") sheetEl = html`<${SettingsSheet} key=${sheet.k} onClose=${close} say=${say} onScanChange=${setScanOn}
+      else if (sheet.t === "settings") sheetEl = html`<${SettingsSheet} key=${sheet.k} onClose=${close}
         onSetup=${() => open({ t: "setup" })} onInstall=${() => open({ t: "install" })}
         onImported=${r => { refreshReg(); showTrip(r.id, true); say("Sicherung eingelesen: " + r.count + (r.count === 1 ? " Buchung." : " Buchungen.")); }} />`;
       else if (sheet.t === "setup") sheetEl = html`<${SetupSheet} key=${sheet.k} onClose=${close} say=${say} />`;
@@ -1701,7 +1620,7 @@
       else if (trip && sheet.t === "invite") sheetEl = mode === "cloud" ? html`<${InviteSheet} key=${sheet.k} trip=${trip} onClose=${close} say=${say} />`
         : Store.cloudOn ? html`<${ShareSheet} key=${sheet.k} onClose=${close} onPublish=${() => publish(trip.id, trip.name)} />`
         : html`<${SetupSheet} key=${sheet.k} onClose=${close} say=${say} />`;
-      else if (trip && sheet.t === "expense") sheetEl = html`<${ExpenseForm} key=${sheet.k} trip=${trip} expense=${sheet.e || null} meId=${meId} scanOn=${scanOn} act=${act} onClose=${close} say=${say} />`;
+      else if (trip && sheet.t === "expense") sheetEl = html`<${ExpenseForm} key=${sheet.k} trip=${trip} expense=${sheet.e || null} meId=${meId} act=${act} onClose=${close} say=${say} />`;
       else if (trip && sheet.t === "transfer") sheetEl = html`<${TransferForm} key=${sheet.k} trip=${trip} transfer=${sheet.e || null} preset=${sheet.preset} meId=${meId} act=${act} onClose=${close} say=${say} />`;
       else if (trip && sheet.t === "trip-edit") sheetEl = html`<${TripEdit} key=${sheet.k} trip=${trip} mode=${mode} list=${expenses || []} loading=${expenses === null} meId=${meId} setMe=${setMe} act=${act} onClose=${close}
         onDelete=${async () => {

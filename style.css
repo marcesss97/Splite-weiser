@@ -331,8 +331,6 @@ label.row { cursor: pointer; }
 .rate-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; }
 .rate-row .input { font-family: var(--mono); }
 .inline { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
-.scan-busy { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; background: var(--accent-soft); font-size: 14.5px; }
-.scan-busy span:nth-child(2) { flex: 1; min-width: 0; }
 .spin { flex: none; width: 18px; height: 18px; border: 2px solid var(--accent); border-right-color: transparent; border-radius: 50%; }
 .sr:focus-visible + .btn { outline: 2px solid var(--accent); outline-offset: 2px; }
 .receipt { position: relative; display: flex; flex-direction: column; gap: 14px; padding: 14px 12px 22px; border-radius: 6px 6px 0 0; background: var(--inset); }

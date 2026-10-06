@@ -446,48 +446,6 @@ window.FK = (function () {
     return e;
   }
 
-  /* ---------- Beleg-Scan ---------- */
-  function receiptPrompt(base, todayIso) {
-    return [
-      "You are reading a photo of a purchase receipt (restaurant bill, shop receipt, ticket or invoice) for an app that splits holiday expenses among friends.",
-      "Reply with only one JSON object and no other text, in exactly this shape:",
-      "{\"merchant\": string, \"date\": \"YYYY-MM-DD\" or null, \"currency\": ISO 4217 code or null, \"total\": number, \"items\": [{\"name\": string, \"amount\": number}], \"category\": one of \"food\", \"apero\", \"groceries\", \"lodging\", \"transport\", \"mountain\", \"activity\", \"shopping\", \"other\"}",
-      "Rules:",
-      "- \"total\" is the final amount paid, including tax, service and tip when they are printed. Write a plain decimal number such as 86.5, with no currency symbol and no thousands separator.",
-      "- \"items\" lists every purchased line with its line total (quantity times unit price). Keep the names as printed, at most 40 characters each. A printed discount is its own item with a negative amount. Never list tax, subtotal, total, tip, change or payment lines as items. If the lines cannot be read, use an empty list.",
-      "- \"currency\" is the currency printed on the receipt. If only a symbol or nothing is printed, infer it from the country, language or VAT wording; if it stays unclear use null. The group's home currency is " + base + ".",
-      "- \"date\" is the purchase date printed on the receipt. If the year is missing, pick the year that puts the date closest to today (" + todayIso + "). With no date use null.",
-      "- \"category\": \"food\" for restaurants and take-away, \"apero\" for bars and drinks only, \"groceries\" for supermarkets and bakeries, \"lodging\" for hotels, huts and rentals, \"transport\" for fuel, trains, taxis, tolls, parking and car rental, \"mountain\" for cable cars, ski passes and mountain guides, \"activity\" for museums, tours and other tickets, \"shopping\" for other shop purchases, \"other\" when nothing fits.",
-      "- If the image is not a receipt or nothing can be read, reply with {\"error\": \"unreadable\"}.",
-      "Example: {\"merchant\": \"Trattoria Da Mario\", \"date\": \"2026-07-14\", \"currency\": \"EUR\", \"total\": 86.5, \"items\": [{\"name\": \"Pizza Margherita\", \"amount\": 9.5}, {\"name\": \"Coperto 4x\", \"amount\": 8}], \"category\": \"food\"}"
-    ].join("\n");
-  }
-  function cleanText(s, max) { return typeof s === "string" ? s.replace(/\s+/g, " ").trim().slice(0, max) : ""; }
-  function toNumber(v) {
-    if (typeof v === "number") return isFinite(v) ? v : null;
-    if (typeof v === "string") { var n = Number(v.replace(/[\s'’]/g, "").replace(",", ".")); return isFinite(n) && v.trim() ? n : null; }
-    return null;
-  }
-  /* Die Antwort kommt von aussen: jedes Feld prüfen, bevor es ins Formular geht. */
-  function parseReceipt(data, fallbackCur, todayIso) {
-    if (!data || typeof data !== "object" || Array.isArray(data) || data.error) return null;
-    var cur = typeof data.currency === "string" ? data.currency.trim().toUpperCase() : "";
-    if (!isCurrency(cur)) cur = fallbackCur;
-    var f = Math.pow(10, digits(cur)), items = [];
-    if (Array.isArray(data.items)) data.items.slice(0, 40).forEach(function (it) {
-      if (!it || typeof it !== "object") return;
-      var a = toNumber(it.amount), n = cleanText(it.name, 60);
-      if (a == null || !a || Math.abs(a) > 1e7) return;
-      items.push({ name: n || "Position", amount: Math.round(a * f) });
-    });
-    var t = toNumber(data.total), total = t != null && t > 0 && t < 1e8 ? Math.round(t * f) : null;
-    if (total == null) { var sum = items.reduce(function (a, it) { return a + it.amount; }, 0); if (sum > 0) total = sum; }
-    if (!(total > 0)) return null;
-    var date = validDate(data.date) ? data.date : null;
-    if (date && todayIso && (date > addDays(todayIso, 1) || date < "2000-01-01")) date = null;
-    return { title: cleanText(data.merchant, 60), amount: total, cur: cur, date: date, cat: isCat(data.category) ? data.category : "other", items: items };
-  }
-
   return {
     CATS: CATS, CURRENCIES: CURRENCIES, catLabel: catLabel, isCat: isCat,
     digits: digits, isCurrency: isCurrency, curName: curName, num: num, money: money, signed: signed, whole: whole, plain: plain, rateText: rateText,
@@ -495,6 +453,6 @@ window.FK = (function () {
     today: today, validDate: validDate, addDays: addDays, dayDiff: dayDiff, fmtDate: fmtDate, dayLabel: dayLabel, rangeLabel: rangeLabel,
     allocate: allocate, memberIds: memberIds, weights: weights, rateFor: rateFor, shares: shares, preview: preview,
     balances: balances, settle: settle, netOf: netOf, stats: stats, niceMax: niceMax, awards: awards,
-    summaryText: summaryText, check: check, normTrip: normTrip, normExpense: normExpense, receiptPrompt: receiptPrompt, parseReceipt: parseReceipt, EXACT_MAX: EXACT_MAX, MAX_MINOR: MAX_MINOR
+    summaryText: summaryText, check: check, normTrip: normTrip, normExpense: normExpense, EXACT_MAX: EXACT_MAX, MAX_MINOR: MAX_MINOR
   };
 })();

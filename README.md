@@ -8,7 +8,7 @@ Dieses README führt zuerst durch drei Schritte und dient danach zum Nachschlage
 2. [Gruppen-Sync einrichten](#2-gruppen-sync-einrichten): 10 Minuten. Danach tragen alle auf dem eigenen Handy ein.
 3. [Probelauf vor den Ferien](#3-probelauf-vor-den-ferien): 5 Minuten zu zweit.
 
-Zum Nachschlagen: [Tageskurse](#tageskurse) · [Beleg-Scan mit KI](#beleg-scan-mit-ki-freiwillig) · [Wer sieht was?](#wer-sieht-was-sicherheit-und-daten) · [Sicherung](#sicherung) · [iPhone](#besonderheiten-auf-dem-iphone) · [Anpassen](#anpassen-und-aktualisieren) · [Was geprüft ist](#was-geprüft-ist-und-was-nicht) · [Lizenzen](#lizenzen)
+Zum Nachschlagen: [Tageskurse](#tageskurse) · [Wer sieht was?](#wer-sieht-was-sicherheit-und-daten) · [Sicherung](#sicherung) · [iPhone](#besonderheiten-auf-dem-iphone) · [Anpassen](#anpassen-und-aktualisieren) · [Was geprüft ist](#was-geprüft-ist-und-was-nicht) · [Lizenzen](#lizenzen)
 
 ## 1. Veröffentlichen auf GitHub
 
@@ -37,9 +37,9 @@ Der Sync läuft über Firebase von Google im kostenlosen Tarif «Spark», ohne K
 Dieselben Schritte stehen auch in der App: auf der Startseite «Gruppen-Sync einrichten». Dort kopiert ein Knopf die Regeln, und ein Link führt direkt zur Datei `config.js` auf GitHub.
 
 1. **Projekt anlegen.** [console.firebase.google.com](https://console.firebase.google.com) öffnen und ein neues Projekt erstellen, Name zum Beispiel «ferienkasse». Google Analytics wird nicht gebraucht: ausschalten.
-2. **Datenbank anlegen.** Im Menü «Firestore» öffnen (unter «Databases & Storage» oder «Build») und «Create database» wählen. Edition «Standard». Die Kennung der Datenbank unverändert auf `(default)` lassen. Standort zum Beispiel `europe-west6 (Zürich)`; er lässt sich später nicht mehr ändern. Start im «Production mode».
-3. **Regeln einsetzen.** In der Datenbank den Reiter «Rules» öffnen. Den vorhandenen Text löschen, den ganzen Inhalt der Datei [`firestore.rules`](firestore.rules) einfügen und «Publish» wählen.
-4. **Web-App registrieren.** Zur Projektübersicht gehen und auf das Symbol `</>` (Web) klicken. Einen Spitznamen eingeben, «Firebase Hosting» nicht ankreuzen, «Register app». Firebase zeigt jetzt einen Block, der mit `const firebaseConfig = {` beginnt und mit `};` endet. Diesen Block kopieren. Später findest du ihn unter dem Zahnrad: «Project settings», «General», «Your apps», Auswahl «Config».
+2. **Datenbank anlegen.** Im Menü links «Databases & Storage» öffnen (deutsch «Datenbanken und Speicher»), dann «Firestore», und «Create database» wählen. Direkt dorthin: [console.firebase.google.com/project/_/firestore](https://console.firebase.google.com/project/_/firestore). Standort zum Beispiel `europe-west6 (Zürich)`; er lässt sich später nicht mehr ändern. Start im «Production mode». Fragt die Konsole nach Edition und Kennung: «Standard», und die Kennung unverändert auf `(default)`.
+3. **Regeln einsetzen.** Auf der Seite «Firestore» steht über der Datenansicht eine Reihe von Reitern, darunter «Rules» (deutsch «Regeln»); auf dem Handy lässt sich die Reihe seitlich schieben. Direkt dorthin: [console.firebase.google.com/project/_/firestore/rules](https://console.firebase.google.com/project/_/firestore/rules). Den vorhandenen Text löschen, den ganzen Inhalt der Datei [`firestore.rules`](firestore.rules) einfügen und «Publish» wählen. Fehlen die Reiter, gibt es die Datenbank noch nicht (Schritt 2).
+4. **Web-App registrieren.** Unter dem Zahnrad «Project settings» öffnen, direkt: [console.firebase.google.com/project/_/settings/general](https://console.firebase.google.com/project/_/settings/general). Unten bei «Your apps» das Symbol `</>` (Web) wählen. Einen Spitznamen eingeben, «Firebase Hosting» nicht ankreuzen, «Register app». Firebase zeigt jetzt einen Block, der mit `const firebaseConfig = {` beginnt und mit `};` endet. Diesen Block kopieren. Später findest du ihn an derselben Stelle bei «Your apps», Auswahl «Config».
 5. **Block in `config.js` einsetzen.** Auf GitHub die Datei `config.js` öffnen, auf den Stift klicken und die eine Zeile `const firebaseConfig = null;` durch den kopierten Block ersetzen. Sonst nichts ändern. «Commit changes». Danach steht dort zum Beispiel:
 
    ```js
@@ -88,21 +88,6 @@ Klappt etwas davon nicht, hilft meist die Meldung in der App. Sonst lohnt ein Bl
 - Ohne Netz setzt die App den letzten bekannten Kurs ein und sagt das dazu.
 - Quellen: [Frankfurter](https://frankfurter.dev) (Kurse der EZB, für seltene Währungen das Mittel mehrerer Zentralbanken). Ist Frankfurter nicht erreichbar, springt die freie «currency-api» über jsDelivr ein. Beide brauchen kein Konto und keinen Schlüssel. Übermittelt werden nur Währungspaar und Datum.
 
-## Beleg-Scan mit KI (freiwillig)
-
-Auf einer GitHub-Seite gibt es keinen Ort für einen geheimen Schlüssel, denn alles im Repository ist öffentlich. Ein Scan, der für alle einfach da ist, geht deshalb nicht ohne eigenen Server. Die Ferienkasse löst es so: Der Knopf «Beleg scannen» erscheint nur auf Geräten, auf denen jemand in den Einstellungen einen eigenen Schlüssel hinterlegt hat. Der Schlüssel bleibt in diesem Browser. Das Foto geht verkleinert direkt vom Gerät an den Anbieter. Alle anderen sehen den Knopf nicht und tragen von Hand ein.
-
-Zwei Anbieter stehen zur Wahl:
-
-- **Anthropic (Claude)**, der Schlüssel beginnt mit `sk-ant-`. Er wird in der Claude Console von Anthropic erstellt (platform.claude.com); abgerechnet wird nach Verbrauch. Ein Beleg kostet mit dem voreingestellten Modell Claude Haiku 4.5 weniger als einen Rappen (Preisliste Oktober 2026: 1 US-Dollar pro Million Eingabe-Token, 5 US-Dollar pro Million Ausgabe-Token).
-- **Google (Gemini)**, der Schlüssel beginnt mit `AIza`. Er wird unter aistudio.google.com/apikey erstellt; es gibt ein kostenloses Kontingent. Zwei Punkte aus Googles Bedingungen für die Gemini API (Stand Oktober 2026): Für Nutzer in der Schweiz, im EWR und in Grossbritannien gelten die Datenregeln der bezahlten Stufe für alle Dienste, auch im kostenlosen Kontingent. Und wer eine Anwendung Nutzern in diesen Ländern bereitstellt, darf dafür nur die bezahlte Stufe verwenden. Wer sichergehen will, schaltet im Google-Projekt die Abrechnung ein oder nimmt Anthropic. Das ist keine Rechtsberatung.
-
-Gut zu wissen:
-
-- Das Ergebnis ist ein Vorschlag. Betrag, Währung und Datum vor dem Speichern prüfen.
-- Den Schlüssel nicht in den Gruppenchat stellen: Wer ihn hat, verbraucht dein Guthaben. «Schlüssel entfernen» löscht ihn vom Gerät.
-- Voreingestellt sind die Modelle `gemini-flash-latest` und `claude-haiku-4-5-20251001`. Bietet ein Anbieter ein Modell nicht mehr an, trägst du im Feld «Modell» ein aktuelles ein.
-
 ## Wer sieht was? Sicherheit und Daten
 
 - **Der Einladungslink ist der Schlüssel.** Wer ihn hat, kann die Reise lesen und ändern. Es gibt kein Konto und kein Passwort. Gib den Link nur an eure Gruppe.
@@ -131,6 +116,7 @@ Gut zu wissen:
 
 - Eine Datei ändern: auf GitHub öffnen, Stift, ändern, «Commit changes». Nach etwa einer Minute ist die neue Fassung veröffentlicht. Die App fragt bei jedem Start mit Netz nach der neusten Fassung.
 - Eine neue Fassung der App einspielen: nur die geänderten Dateien hochladen («Add file», «Upload files»); gleichnamige Dateien werden ersetzt. Die Datei `config.js` dabei nicht ersetzen, sonst ist der Gruppen-Sync wieder ausgeschaltet.
+- Die Datei `scan.js` aus einer früheren Fassung wird nicht mehr gebraucht (der Beleg-Scan mit KI ist entfernt). Sie stört nicht, lässt sich auf GitHub aber löschen: Datei öffnen, Menü mit den drei Punkten, «Delete file».
 - Name und Farben: `manifest.webmanifest` (Name und Farbe der installierten App), `index.html` (Titel) und der Anfang von `style.css` (Farben als Variablen).
 - Währungen in der Auswahl und Kategorien: am Anfang von `logic.js`.
 
@@ -142,7 +128,6 @@ Gut zu wissen:
 | `logic.js` | Rechnen: Aufteilen, Umrechnen, Ausgleich, Statistik |
 | `store.js` | Speichern auf dem Gerät und im Gruppen-Sync |
 | `rates.js` | Tageskurse |
-| `scan.js` | Beleg-Scan |
 | `sw.js`, `manifest.webmanifest`, `icon-*.png`, `apple-touch-icon.png`, `favicon.svg` | Installierbare App, Start ohne Netz |
 | `firestore.rules` | Sicherheitsregeln für die Firebase-Konsole (die Anleitung in der App kopiert sie von hier) |
 | `vendor-*.js`, `*.woff2` | Mitgelieferte Bibliotheken und Schriften, siehe `LICENSES.txt` |
@@ -158,8 +143,8 @@ Geprüft, automatisch und wiederholbar:
 Nicht geprüft, weil es von hier aus nicht möglich war:
 
 - der Betrieb mit einem echten Firebase-Projekt, einschliesslich der Regeln aus `firestore.rules`,
-- die Kursdienste und die KI-Anbieter im echten Betrieb aus dem Browser,
-- echte iPhones und Android-Handys (Installieren, Kamera, Teilen-Menü),
+- die Kursdienste im echten Betrieb aus dem Browser,
+- echte iPhones und Android-Handys (Installieren, Teilen-Menü),
 - die Veröffentlichung auf GitHub Pages selbst.
 
 Dafür ist der [Probelauf](#3-probelauf-vor-den-ferien) da.
